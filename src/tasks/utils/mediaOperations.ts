@@ -1045,7 +1045,20 @@ export const getFileParts = (
         }
     }
 
-    const args = ["-i", filePath, "-filter_complex", `${filterComplex}${filterComplexConcat}`];
+    // Write filter_complex to a temporary file to avoid E2BIG (argument list too long) errors
+    // This is necessary when processing many segments (e.g., 100+ utterances)
+    const filterScriptPath = path.join(dataDir, `${randomId}_filter.txt`);
+    const fullFilterComplex = `${filterComplex}${filterComplexConcat}`;
+    
+    try {
+        fs.writeFileSync(filterScriptPath, fullFilterComplex, 'utf8');
+        console.log(`📝 Wrote filter_complex to file: ${filterScriptPath} (${fullFilterComplex.length} chars)`);
+    } catch (error) {
+        console.error(`❌ Failed to write filter script:`, error);
+        throw new Error(`Failed to write filter script: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    const args = ["-i", filePath, "-filter_complex_script", filterScriptPath];
 
     if (type === "audio") {
         args.push("-map", finalAudioOutput, "-c:a", "libmp3lame", "-b:a", "128k");
@@ -1075,6 +1088,14 @@ export const getFileParts = (
         });
 
         ffmpegProcess.on("close", code => {
+            // Clean up the filter script file
+            try {
+                fs.unlinkSync(filterScriptPath);
+                console.log(`🧹 Cleaned up filter script: ${filterScriptPath}`);
+            } catch (e) {
+                console.warn(`⚠️ Failed to clean up filter script: ${e}`);
+            }
+
             if (code === 0) {
                 console.log(`FFmpeg process completed successfully for output: ${outputFilePath}`);
                 resolve(outputFilePath);
@@ -1087,6 +1108,14 @@ export const getFileParts = (
         });
 
         ffmpegProcess.on("error", err => {
+            // Clean up the filter script file on error
+            try {
+                fs.unlinkSync(filterScriptPath);
+                console.log(`🧹 Cleaned up filter script after error: ${filterScriptPath}`);
+            } catch (e) {
+                console.warn(`⚠️ Failed to clean up filter script after error: ${e}`);
+            }
+            
             console.error(`FFmpeg process error: ${err.message}`);
             reject(err);
         });
