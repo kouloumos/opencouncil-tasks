@@ -544,12 +544,15 @@ function normalizeUtteranceTimestamps(utterances: Array<{
  */
 function escapeTextForFFmpeg(text: string, aspectRatio: AspectRatio = 'default'): string {
     return text
+        // First, escape backslashes (must be done before other escapes that add backslashes)
+        .replace(/\\/g, '\\\\')
+        // Replace actual newline characters with FFmpeg's newline escape sequence
+        // This is critical for filter_complex_script files
+        .replace(/\n/g, '\\n')
         // Escape colons that would interfere with filter parsing
         .replace(/:/g, '\\:')
         // Escape single quotes
         .replace(/'/g, "\\'")
-        // Escape backslashes
-        .replace(/\\/g, '\\\\')
         // Escape percent signs (used for text expansion)
         .replace(/%/g, '\\%');
 }
