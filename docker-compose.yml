@@ -15,6 +15,7 @@ services:
     depends_on:
       - cobalt-api
       - redis
+      - pgsync
 
   cobalt-api:
     image: ghcr.io/imputnet/cobalt:10
@@ -37,8 +38,6 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     command:
       - redis-server
       - --save
@@ -46,10 +45,28 @@ services:
       - "1"
       - --loglevel
       - warning
-      - --requirepass
-      - "${REDIS_PASSWORD}"
     volumes:
       - ./data/redis:/data
+
+  pgsync:
+    image: toluaina1/pgsync:latest
+    container_name: pgsync
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - SCHEMA_URL=${SCHEMA_URL}
+      - PG_URL=${PG_URL}
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - ELASTICSEARCH_API_KEY=${ELASTICSEARCH_API_KEY}
+      - ELASTICSEARCH_API_KEY_ID=${ELASTICSEARCH_API_KEY_ID}
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_CHECKPOINT=true
+      - ELASTICSEARCH=true
+      - OPENSEARCH=false
+    command: -d
+    depends_on:
+      - redis
 
 x-buildkit:
   enabled: true
