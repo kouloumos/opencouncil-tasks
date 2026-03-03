@@ -11,7 +11,7 @@ vi.mock("../lib/DiavgeiaClient.js", () => ({
 
 // Mock aiChat
 vi.mock("../lib/ai.js", () => ({
-    aiChat: vi.fn(async () => ({ result: [], usage: { input_tokens: 0, output_tokens: 0 } })),
+    aiChat: vi.fn(async () => ({ result: [], usage: { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, cache_creation: null, server_tool_use: null, service_tier: null } })),
 }));
 
 import { diavgeiaClient } from "../lib/DiavgeiaClient.js";
@@ -21,7 +21,7 @@ import { pollDecisions } from "./pollDecisions.js";
 const mockFetchAll = vi.mocked(diavgeiaClient.fetchAllDecisions);
 const mockAiChat = vi.mocked(aiChat);
 const noopProgress = vi.fn();
-const noUsage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+const noUsage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, cache_creation: null, server_tool_use: null, service_tier: null };
 
 function makeDecision(overrides: Partial<DiavgeiaDecision> & { ada: string; subject: string }): DiavgeiaDecision {
     return {
