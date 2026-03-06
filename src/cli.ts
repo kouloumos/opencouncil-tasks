@@ -4,16 +4,20 @@ import { Command } from 'commander';
 import { splitAudioDiarization } from './tasks/splitAudioDiarization.js';
 import { pipeline } from './tasks/pipeline.js';
 import { downloadYTV } from './tasks/downloadYTV.js';
-import { uploadToSpaces } from './tasks/uploadToSpaces.js';
+import { uploadToSpaces, deleteFromSpacesByPrefix, checkSpacesConnection } from './tasks/uploadToSpaces.js';
 import { transcribe } from './tasks/transcribe.js';
 import fs from 'fs';
 import { diarize } from './tasks/diarize.js';
+import { pollDecisions } from './tasks/pollDecisions.js';
 import { applyDiarization } from './tasks/applyDiarization.js';
-import { getExpressAppWithCallbacks, isUsingMinIO } from './utils.js';
+import { getExpressAppWithCallbacks, isUsingMinIO, hasRealSpacesCredentials } from './utils.js';
 import { CallbackServer } from './lib/CallbackServer.js';
 import PyannoteDiarizer from './lib/PyannoteDiarize.js';
 import { DiarizeResult } from './types.js';
 import devRouter from './routes/dev.js';
+import { getMuxPlaybackId, deleteMuxAsset, hasMuxCredentials } from './lib/mux.js';
+import { getVideoIdAndUrl } from './tasks/downloadYTV.js';
+
 const program = new Command();
 const app = getExpressAppWithCallbacks();
 
@@ -181,6 +185,16 @@ program
     });
 
 program
+    .command('mux-playback-id <videoUrl>')
+    .description('Create a Mux asset for a video URL and return its playback ID')
+    .action(async (videoUrl: string) => {
+        const { playbackId, assetId } = await getMuxPlaybackId(videoUrl);
+        console.log(`Playback ID: ${playbackId}`);
+        console.log(`Asset ID: ${assetId}`);
+        server.close();
+    });
+
+program
     .command('diarize <url>')
     .description('Diarize an audio url')
     .requiredOption('-O, --output-file <file>', 'Output file for the diarization')
@@ -240,6 +254,174 @@ program
     });
 
 
+program
+    .command('poll-decisions')
+    .description('Poll decisions from Diavgeia and match them to meeting subjects')
+    .option('-d, --meeting-date <date>', 'Meeting date in ISO format (YYYY-MM-DD)')
+    .option('-u, --org-uid <uid>', 'Diavgeia organization UID')
+    .option('--unit-id <unitIds>', 'Comma-separated Diavgeia unit IDs (e.g., 81689,81690)')
+    .option('-s, --subjects-file <file>', 'JSON file (export format or subjects array)')
+    .option('-O, --output-file <file>', 'Output file for the result')
+    .option('--test', 'Use test subjects (for quick testing)')
+    .action(async (options: {
+        meetingDate?: string;
+        orgUid?: string;
+        unitId?: string;
+        subjectsFile?: string;
+        outputFile?: string;
+        test?: boolean;
+    }) => {
+        let subjects: Array<{ subjectId: string; name: string }>;
+        let meetingDate = options.meetingDate;
+        let orgUid = options.orgUid;
+        let unitIds: string[] | undefined = options.unitId
+            ? options.unitId.split(',').map(s => s.trim()).filter(Boolean)
+            : undefined;
+
+        if (options.subjectsFile) {
+            let fileContent: unknown;
+            try {
+                fileContent = JSON.parse(fs.readFileSync(options.subjectsFile, 'utf-8'));
+            } catch (error) {
+                console.error(`Error parsing subjects file: ${error instanceof Error ? error.message : error}`);
+                server.close();
+                process.exitCode = 1;
+                return;
+            }
+
+            // Handle export format with meeting metadata
+            if (fileContent && typeof fileContent === 'object' && 'meeting' in fileContent && 'subjects' in fileContent) {
+                const exportFile = fileContent as { meeting: Record<string, unknown>; subjects: unknown };
+                if (!Array.isArray(exportFile.subjects)) {
+                    console.error('Error: subjects field must be an array');
+                    server.close();
+                    process.exitCode = 1;
+                    return;
+                }
+                const invalidItem = exportFile.subjects.find(
+                    (s: unknown) => !s || typeof s !== 'object' || typeof (s as any).subjectId !== 'string' || typeof (s as any).name !== 'string'
+                );
+                if (invalidItem) {
+                    console.error('Error: each subject must have "subjectId" and "name" string fields');
+                    server.close();
+                    process.exitCode = 1;
+                    return;
+                }
+                subjects = exportFile.subjects as Array<{ subjectId: string; name: string }>;
+                const meeting = exportFile.meeting;
+                // Use meeting metadata from file if not overridden by CLI args
+                if (!options.meetingDate && meeting.date) {
+                    if (typeof meeting.date !== 'string') {
+                        console.error('Error: meeting.date must be a string');
+                        server.close();
+                        process.exitCode = 1;
+                        return;
+                    }
+                    meetingDate = meeting.date;
+                }
+                if (!options.orgUid && meeting.diavgeiaOrgUid) {
+                    if (typeof meeting.diavgeiaOrgUid !== 'string') {
+                        console.error('Error: meeting.diavgeiaOrgUid must be a string');
+                        server.close();
+                        process.exitCode = 1;
+                        return;
+                    }
+                    orgUid = meeting.diavgeiaOrgUid;
+                }
+                if (!options.unitId && meeting.diavgeiaUnitIds) {
+                    if (!Array.isArray(meeting.diavgeiaUnitIds) || meeting.diavgeiaUnitIds.some((id: unknown) => typeof id !== 'string')) {
+                        console.error('Error: meeting.diavgeiaUnitIds must be an array of strings');
+                        server.close();
+                        process.exitCode = 1;
+                        return;
+                    }
+                    unitIds = meeting.diavgeiaUnitIds as string[];
+                } else if (!options.unitId && meeting.diavgeiaUnitId) {
+                    // Backwards compat with old export files
+                    unitIds = [meeting.diavgeiaUnitId as string];
+                }
+                console.log(`Loaded export file: ${meeting.administrativeBody || 'Unknown body'}`);
+            } else if (Array.isArray(fileContent)) {
+                // Simple array format
+                const invalidItem = fileContent.find(
+                    (s: unknown) => !s || typeof s !== 'object' || typeof (s as any).subjectId !== 'string' || typeof (s as any).name !== 'string'
+                );
+                if (invalidItem) {
+                    console.error('Error: each subject must have "subjectId" and "name" string fields');
+                    server.close();
+                    process.exitCode = 1;
+                    return;
+                }
+                subjects = fileContent;
+            } else {
+                console.error('Error: Invalid subjects file format');
+                server.close();
+                process.exitCode = 1;
+                return;
+            }
+        } else if (options.test) {
+            // Test subjects for quick testing
+            subjects = [
+                { subjectId: 'test-1', name: 'Έγκριση προϋπολογισμού' },
+                { subjectId: 'test-2', name: 'Ορισμός επιτροπής' },
+            ];
+            console.log('Using test subjects:', subjects);
+        } else {
+            console.error('Error: Either --subjects-file or --test is required');
+            server.close();
+            process.exitCode = 1;
+            return;
+        }
+
+        if (!meetingDate || !orgUid) {
+            console.error('Error: Meeting date and org UID are required (via CLI args or export file)');
+            server.close();
+            process.exitCode = 1;
+            return;
+        }
+
+        console.log(`Polling decisions for org ${orgUid} from ${meetingDate}`);
+        if (unitIds?.length) {
+            console.log(`Unit IDs: ${unitIds.join(', ')}`);
+        }
+        console.log(`Number of subjects: ${subjects.length}`);
+
+        try {
+            const result = await pollDecisions(
+                {
+                    callbackUrl: '', // Not used for CLI
+                    meetingDate,
+                    diavgeiaUid: orgUid,
+                    diavgeiaUnitIds: unitIds,
+                    subjects,
+                },
+                (stage: string, progressPercent: number) => {
+                    process.stdout.write(`\r[${stage}] ${progressPercent.toFixed(2)}%`);
+                }
+            );
+            process.stdout.write('\n');
+
+            console.log('\n--- Results ---');
+            console.log(`Matched: ${result.matches.length}`);
+            console.log(`Unmatched: ${result.unmatchedSubjects.length}`);
+            console.log(`Ambiguous: ${result.ambiguousSubjects.length}`);
+            console.log(`Total decisions fetched: ${result.metadata?.fetchedCount || 0}`);
+
+            if (options.outputFile) {
+                fs.writeFileSync(options.outputFile, JSON.stringify(result, null, 2));
+                console.log(`\nResult saved to ${options.outputFile}`);
+            } else {
+                console.log('\nFull result:');
+                console.log(JSON.stringify(result, null, 2));
+            }
+        } catch (error) {
+            console.error('\nError polling decisions:', error);
+            process.exitCode = 1;
+        } finally {
+            server.close();
+        }
+    });
+
 const DEFAULT_SMOKE_TEST_VIDEO = "https://www.youtube.com/watch?v=3ugZUq9nm4Y";
 
 program
@@ -298,6 +480,27 @@ program
             }
         }
 
+        const usingRealSpaces = hasRealSpacesCredentials();
+        const usingRealMux = hasMuxCredentials();
+        console.log('=== Smoke Test Configuration ===');
+        console.log(`  Storage:  ${usingRealSpaces ? 'DigitalOcean Spaces' : 'MinIO (local)'}`);
+        console.log(`  Mux:      ${usingRealMux ? 'Real' : 'Mock (no credentials)'}`);
+        console.log('================================\n');
+
+        // Preflight: verify S3 storage is reachable
+        try {
+            console.log('Preflight: checking S3 storage connection...');
+            await checkSpacesConnection();
+            console.log('  S3 storage is reachable\n');
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            console.error(`  S3 storage is NOT reachable: ${msg}\n`);
+            console.error('Check your DO_SPACES_ENDPOINT, DO_SPACES_KEY, DO_SPACES_SECRET, and DO_SPACES_BUCKET settings.');
+            server.close();
+            process.exitCode = 1;
+            return;
+        }
+
         const startTime = Date.now();
         try {
             const result = await pipeline(
@@ -313,9 +516,11 @@ program
                 ['has videoUrl',    typeof result.videoUrl === 'string' && result.videoUrl.length > 0],
                 ['has audioUrl',    typeof result.audioUrl === 'string' && result.audioUrl.length > 0],
                 ['has muxPlaybackId', typeof result.muxPlaybackId === 'string' && result.muxPlaybackId.length > 0],
+                ['has muxAssetId',  typeof result.muxAssetId === 'string' && result.muxAssetId.length > 0],
                 ['has transcript',  result.transcript != null],
                 ['has utterances',  Array.isArray(result.transcript?.transcription?.utterances) && result.transcript.transcription.utterances.length > 0],
                 ['has speakers',    Array.isArray(result.transcript?.transcription?.speakers)],
+                ['uses real Mux',   usingRealMux ? !result.muxPlaybackId.startsWith('MOCK') : result.muxPlaybackId.startsWith('MOCK')],
             ];
 
             let allPassed = true;
@@ -323,6 +528,28 @@ program
                 const icon = passed ? 'PASS' : 'FAIL';
                 console.log(`  [${icon}] ${label}`);
                 if (!passed) allPassed = false;
+            }
+
+            // Clean up Mux asset if we used real credentials
+            if (usingRealMux && result.muxAssetId && !result.muxAssetId.startsWith('MOCK')) {
+                try {
+                    console.log(`\nCleaning up Mux asset: ${result.muxAssetId}`);
+                    await deleteMuxAsset(result.muxAssetId);
+                } catch (cleanupErr) {
+                    console.warn(`Warning: Mux cleanup failed: ${cleanupErr instanceof Error ? cleanupErr.message : cleanupErr}`);
+                }
+            }
+
+            // Clean up S3 objects if we used real DO Spaces
+            if (usingRealSpaces) {
+                try {
+                    const { videoId } = getVideoIdAndUrl(url);
+                    console.log(`\nCleaning up S3 objects for videoId: ${videoId}`);
+                    await deleteFromSpacesByPrefix(`audio/${videoId}`);
+                    await deleteFromSpacesByPrefix(`council-meeting-videos/${videoId}`);
+                } catch (cleanupErr) {
+                    console.warn(`Warning: S3 cleanup failed: ${cleanupErr instanceof Error ? cleanupErr.message : cleanupErr}`);
+                }
             }
 
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

@@ -29,7 +29,6 @@ export const addUsage = (usage: Anthropic.Messages.Usage, otherUsage: Anthropic.
     server_tool_use: null, // Don't aggregate server_tool_use details
     service_tier: usage.service_tier || otherUsage.service_tier  // Take the first non-null tier
 });
-const maxTokens = 64000;
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const logFilePath = path.join(process.env.LOG_DIR || process.cwd(), 'ai.log');
@@ -46,6 +45,8 @@ async function logToFile(message: string, data?: any) {
         console.error('Failed to write to log file:', err);
     }
 }
+
+const maxTokens = 64000;
 
 type AiChatOptions = {
     model?: string;
