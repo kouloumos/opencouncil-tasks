@@ -204,6 +204,7 @@ export interface RequestOnTranscript extends TaskRequest {
         speakerName: string | null;
         speakerParty: string | null;
         speakerRole: string | null;
+        speakerId: string | null;
         speakerSegmentId: string;
         text: string;
         utterances: {
@@ -215,6 +216,7 @@ export interface RequestOnTranscript extends TaskRequest {
     }[];
     topicLabels: string[];
     cityName: string;
+    administrativeBodyName: string | null;
     partiesWithPeople: {
         name: string;
         people: {

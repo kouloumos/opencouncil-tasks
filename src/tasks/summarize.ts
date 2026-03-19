@@ -340,6 +340,7 @@ function getSummarizeSystemPrompt(cityName: string, date: string, topicLabels: s
         speakerName: "Χρήστος Χρήστου",
         speakerParty: "Καλύτερη Πόλη",
         speakerRole: null,
+        speakerId: null,
         speakerSegmentId: "abcdefg1234567890",
         text: `
         Κύριε Πρόεδρε, σύντομα, μια κουβέντα για την καθημερινότητα.
@@ -354,6 +355,7 @@ function getSummarizeSystemPrompt(cityName: string, date: string, topicLabels: s
     }, {
         speakerName: "Θανάσης Παπαγιώργος",
         speakerParty: "Αναγέννηση Τώρα",
+        speakerId: null,
         speakerSegmentId: "abcdefg1234567891",
         speakerRole: null,
         text: `
