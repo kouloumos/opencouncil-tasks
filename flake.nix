@@ -53,7 +53,7 @@
           version = "1.0.0";
           src = ./.;
 
-          npmDepsHash = "sha256-Oe6gD1kemnX8qkGNtn9wjIIJLz5fzZ6Nn7be6mwHzaI=";
+          npmDepsHash = "sha256-V5wL5FS+WNEEiaODNANTdV5SXuVtnW6xz8cEFZaBJIQ=";
 
           # Handle peer dependency conflicts and skip postinstall scripts
           # (puppeteer downloads Chromium, ffmpeg-static downloads ffmpeg)

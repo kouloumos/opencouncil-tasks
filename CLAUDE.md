@@ -30,6 +30,12 @@ npm test                              # unit tests (vitest)
 
 **Before committing, always run:** `npm run typecheck && npm test`
 
+**If `package-lock.json` changed** (added/removed/updated dependencies), update `npmDepsHash` in `flake.nix`:
+```bash
+nix run nixpkgs#prefetch-npm-deps package-lock.json
+```
+Copy the output hash into `flake.nix`. Preview deployments will fail without this.
+
 ## Code conventions
 
 - TypeScript strict mode, ESM (`"type": "module"`)
