@@ -15,6 +15,13 @@ export const addUsage = (usage: Anthropic.Messages.Usage, otherUsage: Anthropic.
     cache_creation_input_tokens: (usage.cache_creation_input_tokens || 0) + (otherUsage.cache_creation_input_tokens || 0),
     cache_read_input_tokens: (usage.cache_read_input_tokens || 0) + (otherUsage.cache_read_input_tokens || 0),
 });
+
+export function formatUsage(usage: Anthropic.Messages.Usage): string {
+    const parts = [`${usage.input_tokens.toLocaleString()} in, ${usage.output_tokens.toLocaleString()} out`];
+    if (usage.cache_creation_input_tokens) parts.push(`${usage.cache_creation_input_tokens.toLocaleString()} cache-write`);
+    if (usage.cache_read_input_tokens) parts.push(`${usage.cache_read_input_tokens.toLocaleString()} cache-read`);
+    return parts.join(', ');
+}
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const logFilePath = path.join(process.env.LOG_DIR || process.cwd(), 'ai.log');
