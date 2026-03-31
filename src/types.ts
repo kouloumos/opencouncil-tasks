@@ -407,6 +407,7 @@ export interface ExtractedDecisionResult {
     references: string;
     presentMemberIds: string[];
     absentMemberIds: string[];
+    mayorPresent?: boolean;
     voteResult: string | null;
     voteDetails: { personId: string; vote: 'FOR' | 'AGAINST' | 'ABSTAIN' }[];
     unmatchedMembers: string[];
@@ -421,6 +422,7 @@ export interface PollDecisionsRequest extends TaskRequest {
     meetingDate: string; // ISO date of the meeting
     diavgeiaUid: string; // Organization UID on Diavgeia
     diavgeiaUnitIds?: string[]; // Optional unit IDs (e.g., ["81689"] for ΔΗΜΟΤΙΚΟ ΣΥΜΒΟΥΛΙΟ)
+    mayorId?: string; // Person ID of the city mayor, for presence extraction
     people: { id: string; name: string }[];
     subjects: Array<{
         subjectId: string;
