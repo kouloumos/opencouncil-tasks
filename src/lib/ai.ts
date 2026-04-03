@@ -57,6 +57,7 @@ type AiChatOptions = {
     prependToResponse?: string;
     parseJson?: boolean;
     model?: keyof typeof MODEL_IDS;
+    maxTokens?: number;
 }
 
 async function withRateLimitRetry<T>(fn: () => Promise<T>): Promise<T> {
@@ -77,10 +78,10 @@ async function withRateLimitRetry<T>(fn: () => Promise<T>): Promise<T> {
     }
 }
 
-export async function aiChat<T>({ systemPrompt, userPrompt, prefillSystemResponse, prependToResponse, documentBase64, parseJson = true, model = 'sonnet' }: AiChatOptions): Promise<ResultWithUsage<T>> {
+export async function aiChat<T>({ systemPrompt, userPrompt, prefillSystemResponse, prependToResponse, documentBase64, parseJson = true, model = 'sonnet', maxTokens }: AiChatOptions): Promise<ResultWithUsage<T>> {
     try {
         const modelId = MODEL_IDS[model];
-        const modelMaxTokens = MODEL_MAX_TOKENS[model];
+        const modelMaxTokens = maxTokens ?? MODEL_MAX_TOKENS[model];
         console.log(`Sending message to ${modelId}...`);
         let messages: Anthropic.Messages.MessageParam[] = [];
         if (documentBase64) {
