@@ -534,6 +534,29 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
             },
         }));
 
+    // Fetch Diavgeia metadata for needsExtraction subjects that have an ADA.
+    // This enriches manually-added decisions with title, protocolNumber, and publishDate.
+    // Runs in parallel with extraction since they're independent.
+    const metadataPromise = (async () => {
+        const metadata = new Map<string, { title: string; protocolNumber: string; publishDate: string }>();
+        const fetches = needsExtractionSubjects
+            .filter(s => s.decision.ada)
+            .map(async (s) => {
+                try {
+                    const d = await client.decision(s.decision.ada!);
+                    metadata.set(s.subjectId, {
+                        title: d.subject,
+                        protocolNumber: d.protocolNumber,
+                        publishDate: msToISODate(d.publishTimestamp),
+                    });
+                } catch (e) {
+                    console.warn(`Failed to fetch Diavgeia metadata for ADA ${s.decision.ada}:`, e);
+                }
+            });
+        await Promise.allSettled(fetches);
+        return metadata;
+    })();
+
     const allExtractionSubjects = [...extractionSubjects, ...needsExtractionSubjects];
 
     let extractionResult: PollDecisionsResult['extractions'] = null;
@@ -656,6 +679,18 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
                 if (unmEntry) unmEntry.reason = reason;
                 pipelineResult.warnings.push(
                     `Subject "${originalSubjectName}": ${reason}. Match discarded.`);
+            }
+        }
+
+        // Enrich extraction results with Diavgeia metadata for needsExtraction subjects
+        const diavgeiaMetadata = await metadataPromise;
+        for (const decision of pipelineResult.decisions) {
+            const meta = diavgeiaMetadata.get(decision.subjectId);
+            if (meta) {
+                decision.diavgeiaTitle = meta.title;
+                decision.diavgeiaPublishDate = meta.publishDate;
+                // Prefer Diavgeia API protocolNumber over PDF-extracted one
+                decision.protocolNumber = meta.protocolNumber || decision.protocolNumber;
             }
         }
 
