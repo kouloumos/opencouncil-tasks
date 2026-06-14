@@ -162,23 +162,27 @@ export const extractedSubjectToApiSubject = async (
 ) => {
     const id = generateSubjectUUID(subject, 36);
 
-    const input: EnrichmentInput = {
-        name: subject.name,
-        description: subject.description,
-        locationText: subject.locationText,
-        topicImportance: subject.topicImportance,
-        proximityImportance: subject.proximityImportance,
-        topicLabel: subject.topicLabel,
-        agendaItemIndex: subject.agendaItemIndex!,
-        introducedByPersonId: subject.introducedByPersonId,
-        speakerContributions: subject.speakerContributions,
-        discussedIn: null  // Agenda items are always independent initially
+    // TEMP (REVERT): skip enrichment (geocode + web context) — wasted tokens here
+    // because the summarize task re-enriches and overwrites these subjects.
+    return {
+        result: {
+            id,
+            name: subject.name,
+            description: subject.description,
+            agendaItemIndex: subject.agendaItemIndex!,
+            introducedByPersonId: subject.introducedByPersonId,
+            speakerContributions: subject.speakerContributions,
+            topicImportance: subject.topicImportance,
+            proximityImportance: subject.proximityImportance,
+            location: null,
+            topicLabel: subject.topicLabel,
+            context: { text: "", citationUrls: [] },
+            discussedIn: null  // Agenda items are always independent initially
+        },
+        usage: NO_USAGE,
+        resolvedModel: undefined,
+        batchMode: undefined
     };
-
-    return enrichSubjectData(input, id, {
-        cityName,
-        date
-    });
 }
 
 export function fillMissingAgendaIndices(subjects: Array<{ agendaItemIndex: number | null }>): TaskWarning<AgendaWarningCode>[] {
