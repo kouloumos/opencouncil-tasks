@@ -278,9 +278,11 @@ EOF
                     mkdir -p "$DENO_DIR"
 
                     # Use system binaries (ffmpeg-static download was skipped in Nix build)
+                    # yt-dlp from unstable: prod's Dockerfile pulls the latest release, while
+                    # nixpkgs-24.11 lags ~a year — sourcing from unstable keeps previews faithful.
                     export FFMPEG_BIN_PATH="${pkgs.ffmpeg}/bin/ffmpeg"
-                    export YTDLP_BIN_PATH="${pkgs.yt-dlp}/bin/yt-dlp"
-                    export PATH="${pkgs.ffmpeg}/bin:${pkgs.yt-dlp}/bin:${pkgs-unstable.deno}/bin:$PATH"
+                    export YTDLP_BIN_PATH="${pkgs-unstable.yt-dlp}/bin/yt-dlp"
+                    export PATH="${pkgs.ffmpeg}/bin:${pkgs-unstable.yt-dlp}/bin:${pkgs-unstable.deno}/bin:$PATH"
 
                     cd "$APP_DIR"
                     exec ${pkgs.nodejs}/bin/node dist/server.js
