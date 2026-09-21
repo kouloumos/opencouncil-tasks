@@ -25,3 +25,9 @@ squid.conf
 
 # Debug output (CLI intermediates)
 .debug/
+
+# Survey intermediates: large, regenerable from the cache, not worth versioning
+.extraction-survey/
+
+# Byte-code from the committed survey scripts
+__pycache__/

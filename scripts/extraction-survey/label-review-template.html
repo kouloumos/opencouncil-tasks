@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Label review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#F4F6F8;--card:#fff;--ink:#15191E;--soft:#4A545F;--faint:#7C8794;
+    --rule:#D8DEE5;--ruleSoft:#EAEEF2;
+    --blue:#2B5C93;--blueBg:#E7EEF7;--amber:#B07A25;--amberBg:#FAF0DE;
+    --red:#A63D2F;--redBg:#FAE9E6;--green:#2E6B4F;--greenBg:#E6F1EB;
+    --sans:"Commissioner",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#12161A;--card:#191E24;--ink:#E6EBF0;--soft:#A4B0BC;--faint:#78838F;
+    --rule:#2B333B;--ruleSoft:#222930;--blue:#7FAEDD;--blueBg:#1A2734;
+    --amber:#D9A551;--amberBg:#2C2418;--red:#E08276;--redBg:#2E1D1B;--green:#6FBF97;--greenBg:#16241D;
+  }}
+  *{box-sizing:border-box}html,body{height:100%}
+  body{margin:0;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--paper);
+       display:grid;grid-template-columns:210px minmax(400px,1.2fr) minmax(420px,470px);height:100vh;overflow:hidden}
+  nav{border-right:1px solid var(--rule);overflow:auto;background:var(--card)}
+  .navhead{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--rule);padding:10px 12px;z-index:2}
+  .navhead button{font:inherit;font-size:12px;padding:4px 9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+  .prog{font-size:11.5px;color:var(--faint);margin-top:7px;font-variant-numeric:tabular-nums}
+  .sec{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:12px 12px 4px;font-weight:600}
+  nav a{display:flex;align-items:center;gap:7px;padding:5px 12px;text-decoration:none;color:var(--ink);font-size:12.5px;font-family:var(--mono)}
+  nav a:hover{background:var(--paper)}nav a.cur{background:var(--blueBg);color:var(--blue);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--rule);flex:none}
+  .dot.done{background:var(--green)}.dot.part{background:var(--amber)}
+  main{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-width:0}
+  iframe{flex:1;width:100%;border:0;background:#fff}
+  aside{overflow:auto;padding:14px 16px 60px}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{color:var(--faint);font-size:12.5px;margin-bottom:12px}.sub a{color:var(--blue)}
+  h2{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:18px 0 7px;font-weight:600}
+  .issue{border:1px solid var(--rule);border-left:3px solid var(--amber);border-radius:0 4px 4px 0;
+         background:var(--card);padding:11px 13px;margin-bottom:10px}
+  .issue.p1{border-left-color:var(--red)}
+  .issue.resolved{border-left-color:var(--green)}
+  .issue .t{font-weight:600;font-size:13.5px;margin-bottom:2px}
+  .issue .d{font-size:12.5px;color:var(--soft);margin-bottom:8px;line-height:1.45}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  .side{border:1px solid var(--ruleSoft);border-radius:3px;padding:7px 9px;background:var(--paper)}
+  .side h4{margin:0 0 4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .side .v{font-family:var(--mono);font-size:11.5px;line-height:1.5;word-break:break-word}
+  .opts{display:flex;flex-wrap:wrap;gap:5px}
+  .opts button{font:inherit;font-size:12px;padding:4px 9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+  .opts button.sel{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+  textarea{width:100%;margin-top:7px;border:1px solid var(--rule);border-radius:3px;padding:5px 7px;
+           font:inherit;font-size:12.5px;background:var(--paper);color:var(--ink);resize:vertical;min-height:30px}
+  table.kv{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--rule);border-radius:4px;font-size:12.5px}
+  table.kv td{padding:5px 10px;border-bottom:1px solid var(--ruleSoft);vertical-align:top}
+  table.kv tr:last-child td{border-bottom:none}
+  table.kv td:first-child{color:var(--faint);width:40%}
+  table.kv td:last-child{font-family:var(--mono);font-size:11.5px;word-break:break-word}
+  .pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:2px}
+  .pill.P1{background:var(--redBg);color:var(--red)}.pill.P2{background:var(--amberBg);color:var(--amber)}.pill.P3{background:var(--ruleSoft);color:var(--faint)}
+  .banner{background:var(--amberBg);border-left:3px solid var(--amber);border-radius:0 3px 3px 0;padding:9px 12px;font-size:12.5px;line-height:1.5;margin-bottom:12px}
+  kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:3px;padding:0 4px;color:var(--faint)}
+</style></head><body>
+<nav><div class="navhead"><button onclick="exportAll()">Export labels</button><div class="prog" id="prog"></div></div><div id="navlist"></div></nav>
+<main><iframe id="pdf" title="decision document"></iframe></main>
+<aside id="panel"></aside>
+<script>
+const DATA = __DATA__;
+const KEY='label-review-v1';
+let store={}; try{store=JSON.parse(localStorage.getItem(KEY)||'{}')}catch{}
+store.docs=store.docs||{};
+const save=()=>localStorage.setItem(KEY,JSON.stringify(store));
+let i=0;
+const D=()=>DATA.docs[i];
+const st=(ada)=>store.docs[ada]||{};
+function status(d){
+  const s=st(d.ada); const n=d.issues.filter((_,k)=>s['i'+k]).length;
+  return n===0?'':n===d.issues.length?'done':'part';
+}
+function renderNav(){
+  let h='',pri=null;
+  DATA.docs.forEach((d,k)=>{
+    if(d.topPriority!==pri){pri=d.topPriority;h+=`<div class="sec">${pri==='P1'?'wrong value stored':'value lost'}</div>`}
+    h+=`<a href="#" class="${k===i?'cur':''}" onclick="go(${k});return false"><span class="dot ${status(d)}"></span>${esc(d.ada)}</a>`;
+  });
+  document.getElementById('navlist').innerHTML=h;
+  const done=DATA.docs.filter(d=>status(d)==='done').length;
+  document.getElementById('prog').textContent=`${done} of ${DATA.docs.length} resolved · ${DATA.clean} already agree`;
+}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const fmt=v=>v===null||v===undefined||v===''?'—':typeof v==='object'?JSON.stringify(v,null,1):String(v);
+
+/* What each side claims, per issue kind, so the reviewer compares like with like. */
+function sides(d,is){
+  const s=d.survey,e=d.extraction;
+  switch(is.what){
+    case 'agenda item invented':
+    case 'agenda item disagrees':
+      return [`item ${fmt(s.agendaItem)}${s.outOfAgenda?' (out of agenda)':''}`, `item ${fmt(e.subjectInfo&&e.subjectInfo.agendaItemIndex)}`];
+    case 'declaration stored as a vote':
+    case 'declaration dropped':
+      return [`ΠΑΡΩΝ/ΑΠΟΧΗ recorded · phrase «${fmt(s.votePhrase)}»`, e.voteDetails.length?e.voteDetails.map(v=>`${v.name}: ${v.vote}`).join('\n'):'no voteDetails'];
+    case 'named voters dropped':
+      return [`names voters (${fmt(s.namedVoters)}) · «${fmt(s.votePhrase)}»`, 'no voteDetails'];
+    case 'vote tally dropped':
+      return [`«${fmt(s.votePhrase)}»`, `«${fmt(e.voteResult)}»`];
+    case 'present count disagrees':
+      return [`${fmt(s.present)} present of a stated body of ${fmt(s.statedBodySize)}`, `${e.present} names:\n${e.presentNames.join(', ')}`];
+    case 'absent count disagrees':
+      return [`${fmt(s.absent)} absent`, `${e.absent} names:\n${e.absentNames.join(', ')}`];
+    case 'attendance change dropped':
+      return [`records a change, anchored by ${fmt(s.anchor)}`, 'no attendanceChanges'];
+    case 'no decision text':
+      return ['the page carries a decision', `excerpt is ${e.excerptChars} chars`];
+    case 'flagged truncated':
+      return [`${d.pages} pages`, `incomplete=true · excerpt ${e.excerptChars} chars`];
+    default: return ['—','—'];
+  }
+}
+function ans(k,v){const a=D().ada;store.docs[a]=store.docs[a]||{};store.docs[a]['i'+k]=store.docs[a]['i'+k]===v?undefined:v;save();renderNav();render()}
+function note(k,v){const a=D().ada;store.docs[a]=store.docs[a]||{};store.docs[a]['n'+k]=v;save()}
+function go(k){if(k<0||k>=DATA.docs.length)return;i=k;renderNav();render()}
+function render(){
+  const d=D(),s=st(d.ada);
+  document.getElementById('pdf').src=d.pdf+'#zoom=page-width&pagemode=none';
+  let h=`<h1>${esc(d.cityName)} · ${esc(d.body)}</h1>
+    <div class="sub"><a href="https://diavgeia.gov.gr/doc/${encodeURIComponent(d.ada)}" target="_blank">${esc(d.ada)}</a> · ${d.pages} pages</div>`;
+  if(d.edgeWhy) h+=`<div class="banner"><b>named edge case.</b> ${esc(d.edgeWhy)}</div>`;
+  h+=`<h2>Disagreements to settle</h2>`;
+  d.issues.forEach((is,k)=>{
+    const [a,b]=sides(d,is); const v=s['i'+k];
+    h+=`<div class="issue ${is.priority==='P1'?'p1':''} ${v?'resolved':''}">
+      <div class="t"><span class="pill ${is.priority}">${is.priority}</span> ${esc(is.what)}</div>
+      <div class="d">${esc(is.detail)}</div>
+      <div class="two">
+        <div class="side"><h4>the page states (survey)</h4><div class="v">${esc(a)}</div></div>
+        <div class="side"><h4>we stored (extraction)</h4><div class="v">${esc(b)}</div></div>
+      </div>
+      <div class="opts">
+        ${['survey is right','extraction is right','neither is right','not resolvable from this page']
+          .map(o=>`<button class="${v===o?'sel':''}" onclick="ans(${k},${JSON.stringify(o).replace(/"/g,'&quot;')})">${o}</button>`).join('')}
+      </div>
+      <textarea placeholder="the correct value, as the page states it" oninput="note(${k},this.value)">${esc(s['n'+k]||'')}</textarea>
+    </div>`;
+  });
+  h+=`<h2>Both readings in full</h2><table class="kv">
+    ${row('roll call layout',d.survey.rollCallForm)}
+    ${row('headings',(d.survey.headings||[]).join(' · '))}
+    ${row('stated body size',d.survey.statedBodySize)}
+    ${row('present / absent',`page ${fmt(d.survey.present)}/${fmt(d.survey.absent)} · extraction ${d.extraction.present}/${d.extraction.absent}`)}
+    ${row('vote phrase',`page «${fmt(d.survey.votePhrase)}» · stored «${fmt(d.extraction.voteResult)}»`)}
+    ${row('named voters',`page ${fmt(d.survey.namedVoters)} · stored ${d.extraction.voteDetails.length} entries`)}
+    ${row('decision number',`page ${fmt(d.survey.decisionNumber)} · stored ${fmt(d.extraction.decisionNumber)}`)}
+    ${row('attendance changes',`page ${d.survey.changes?'yes, '+fmt(d.survey.anchor):'none'} · stored ${d.extraction.changes.length}`)}
+    ${row('excerpt',`${d.extraction.excerptChars} chars${d.extraction.incomplete?' · flagged truncated':''}`)}
+  </table>`;
+  if(d.extraction.changes.length) h+=`<h2>Changes as stored</h2><table class="kv">${
+    d.extraction.changes.map(c=>row(`${c.type} ${esc(c.name)}`,`item ${fmt(c.item&&c.item.agendaItemIndex)} ${fmt(c.timing)} · «${esc(c.raw)}»`)).join('')}</table>`;
+  h+=`<div class="sub" style="margin-top:14px"><kbd>j</kbd> <kbd>k</kbd> documents</div>`;
+  document.getElementById('panel').innerHTML=h;
+  document.getElementById('panel').scrollTop=0;
+}
+const row=(k,v)=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`;
+function exportAll(){
+  const out={reviewedAt:new Date().toISOString(),documents:{}};
+  for(const d of DATA.docs){
+    const s=st(d.ada); if(!Object.keys(s).length) continue;
+    out.documents[d.ada]={city:d.city,body:d.body,
+      issues:d.issues.map((is,k)=>({...is,verdict:s['i'+k]||null,correctValue:s['n'+k]||null}))};
+  }
+  const b=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='label-review.json';a.click();
+}
+document.addEventListener('keydown',e=>{if(e.target.tagName==='TEXTAREA')return;
+  if(e.key==='j')go(i+1); if(e.key==='k')go(i-1);});
+renderNav();render();
+</script></body></html>

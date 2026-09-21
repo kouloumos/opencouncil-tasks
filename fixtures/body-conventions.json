@@ -1,0 +1,1546 @@
+{
+ "generatedAt": "2026-09-13",
+ "source": "Sonnet survey of 1,023 documents across 30 bodies, plus a body-by-body human review",
+ "globalRules": [
+  "Councils never use substitutes; committees do. Any council substitute in the data is leakage from an embedded decision of another body.",
+  "The mayor's presence or absence is stated separately in essentially every body. The fixture needs one present and one absent example per body.",
+  "The layout predicts what a present list means better than the body type does. With an explicit ΠΑΡΟΝΤΕΣ list it is the opening roll call in 5 of 7 bodies. With a roster plus absentees it depends on whether the absent list names people who later arrived."
+ ],
+ "bodies": [
+  {
+   "city": "argithea",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 35,
+   "documentsRead": 38,
+   "meetingsSampled": 7,
+   "meetingsTotal": 7,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 3,
+    "headings": [
+     "Παρόντες",
+     "Απόντες",
+     "Μ έ λ η",
+     "Τρόπος Παρουσίας",
+     "Μέλη"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 1,
+    "anchor": "decision_number",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 1,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 1
+   },
+   "votes": {
+    "phraseStatedPct": 95,
+    "carriesTallyPct": 3,
+    "namedVoters": {
+     "never": 28,
+     "dissentersOnly": 10,
+     "everyVoter": 0
+    },
+    "declarationsPct": 8,
+    "partialVotesPct": 3
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "mayor presence stated",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present and absent lists, body of 5. No substitute appears anywhere in 33 documents even where members are absent — the case exists in principle but not in our corpus. Must be hunted on Diavgeia.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "argithea",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 16,
+   "documentsRead": 39,
+   "meetingsSampled": 4,
+   "meetingsTotal": 4,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ",
+     "Παρόντες",
+     "Απόντες",
+     "Μ έ λ η"
+    ],
+    "presentListMeaning": "thin",
+    "evidence": "4 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 9,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 74,
+    "carriesTallyPct": 3,
+    "namedVoters": {
+     "never": 29,
+     "dissentersOnly": 9,
+     "everyVoter": 1
+    },
+    "declarationsPct": 5,
+    "partialVotesPct": 8
+   },
+   "mayorPresenceStatedPct": 92,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Departures exist: 9ΗΧΧΩΨ3-3ΝΟ and Ρ09ΤΩΨ3-ΘΤΝ, two minority members walking out after the 8th item with a recorded statement of reasons. No arrival anywhere, so the present-list question is untestable from this corpus.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "argos",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 76,
+   "documentsRead": 40,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "Παρόντες",
+     "Απόντες",
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 0,
+    "anchor": null,
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 15,
+    "replacedMemberAlsoListed": 5,
+    "replacedMemberNotListed": 10
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 37,
+     "dissentersOnly": 3,
+     "everyVoter": 0
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 2,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "a departure",
+    "a vote tally",
+    "a declaration",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": "No attendance change of any kind in 40 documents. The two Argos bodies behave completely differently; the council's ΑΠΟΧΩΡΗΣΑΝΤΕΣ convention does not appear here.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "argos",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 302,
+   "documentsRead": 40,
+   "meetingsSampled": 37,
+   "meetingsTotal": 37,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ",
+     "ΑΠΟΧΩΡΗΣΑΝΤΕΣ",
+     "2ΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "2 cumulative : 13 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 15,
+    "anchor": "this_document",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 70,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 31,
+     "dissentersOnly": 8,
+     "everyVoter": 1
+    },
+    "declarationsPct": 5,
+    "partialVotesPct": 2
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a departure",
+    "a substitute",
+    "a vote tally",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "The roll call carries a third list, ΑΠΟΧΩΡΗΣΑΝΤΕΣ, beside ΠΑΡΟΝΤΕΣ and ΑΠΟΝΤΕΣ. It names those who had already left by the time of the decision this document records, and appears only in the documents of decisions the person missed. Per-decision attendance, stated directly. ΨΠ4ΗΩΨΔ-ΘΘΘ has one; Ψ7ΦΖΩΨΔ-ΥΦΘ does not.",
+   "surveyWasWrong": "pinned to nothing — wrong, and backwards: this is the most precisely placed form we have."
+  },
+  {
+   "city": "athens",
+   "body": "1η Δημοτική Κοινότητα",
+   "corpusSize": 386,
+   "documentsRead": 40,
+   "meetingsSampled": 10,
+   "meetingsTotal": 10,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 1ης ΔΗΜΟΤΙΚΗΣ ΚΟΙΝΟΤΗΤΑΣ",
+     "ΤΑ ΜΕΛΗ ΤΟΥ ΣΥΜΒΟΥΛΙΟΥ ΤΗΣ 1ης ΔΗΜΟΤΙΚΗΣ ΚΟΙΝΟΤΗΤΑΣ"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "20 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 36,
+    "anchor": "decision_number",
+    "anchorDissentPct": 3
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 16,
+     "dissentersOnly": 0,
+     "everyVoter": 24
+    },
+    "declarationsPct": 32,
+    "partialVotesPct": 2
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "a vote tally",
+    "mayor presence stated",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "2η Δημοτική Κοινότητα",
+   "corpusSize": 110,
+   "documentsRead": 40,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 2ης ΔΗΜΟΤΙΚΗΣ ΚΟΙΝΟΤΗΤΑΣ"
+    ],
+    "presentListMeaning": "contested",
+    "evidence": "16 cumulative : 5 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 26,
+    "anchor": "decision_number",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 95,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 29,
+     "dissentersOnly": 1,
+     "everyVoter": 10
+    },
+    "declarationsPct": 10,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "a vote tally",
+    "mayor presence stated",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "3η Δημοτική Κοινότητα",
+   "corpusSize": 41,
+   "documentsRead": 39,
+   "meetingsSampled": 7,
+   "meetingsTotal": 7,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΡΟΕΔΡΟΣ",
+     "ΜΕΛΗ",
+     "ΓΡΑΜΜΑΤΕΑΣ"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "26 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 39,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 31
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 23,
+    "namedVoters": {
+     "never": 6,
+     "dissentersOnly": 33,
+     "everyVoter": 0
+    },
+    "declarationsPct": 13,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "mayor presence stated",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "4η Δημοτική Κοινότητα",
+   "corpusSize": 31,
+   "documentsRead": 35,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 3,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 4ΗΣ ΔΗΜΟΤΙΚΗΣ ΚΟΙΝΟΤΗΤΑΣ",
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 4ης ΔΗΜΟΤΙΚΗΣ ΚΟΙΝΟΤΗΤΑΣ",
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 4ης ΚΟΙΝΟΤΗΤΑΣ"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "10 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 16,
+    "anchor": "decision_number",
+    "anchorDissentPct": 6
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 94,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 0,
+     "dissentersOnly": 0,
+     "everyVoter": 35
+    },
+    "declarationsPct": 23,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "a vote tally",
+    "mayor presence stated",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "5η Δημοτική Κοινότητα",
+   "corpusSize": 46,
+   "documentsRead": 40,
+   "meetingsSampled": 7,
+   "meetingsTotal": 7,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 5ης ΚΟΙΝΟΤΗΤΑΣ",
+     "ΟΙ ΑΠΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "5 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 13,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 38
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 98,
+    "carriesTallyPct": 12,
+    "namedVoters": {
+     "never": 37,
+     "dissentersOnly": 3,
+     "everyVoter": 0
+    },
+    "declarationsPct": 2,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "mayor presence stated",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "6η Δημοτική Κοινότητα",
+   "corpusSize": 82,
+   "documentsRead": 40,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 2,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 6ης ΚΟΙΝΟΤΗΤΑΣ",
+     "ΜΕΛΗ"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 2,
+    "anchor": "nothing",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 10,
+    "namedVoters": {
+     "never": 0,
+     "dissentersOnly": 5,
+     "everyVoter": 35
+    },
+    "declarationsPct": 5,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "a substitute",
+    "mayor presence stated",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "7η Δημοτική Κοινότητα",
+   "corpusSize": 93,
+   "documentsRead": 40,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΣΥΜΒΟΥΛΙΟΥ 7ης ΔΗΜΟΤΙΚΗΣ ΚΟΙΝΟΤΗΤΑΣ"
+    ],
+    "presentListMeaning": "contested",
+    "evidence": "8 cumulative : 6 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 17,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 12
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 95,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 11,
+     "dissentersOnly": 0,
+     "everyVoter": 29
+    },
+    "declarationsPct": 2,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "a vote tally",
+    "mayor presence stated",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 262,
+   "documentsRead": 40,
+   "meetingsSampled": 11,
+   "meetingsTotal": 11,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 2,
+    "headings": [
+     "ΤΑΚΤΙΚΟ ΜΕΛΟΣ",
+     "με την εξής σύνθεση",
+     "ΠΡΟΕΔΡΟΣ",
+     "ΑΝΑΠΛΗΡΩΜΑΤΙΚΟ ΜΕΛΟΣ",
+     "με την εξής σύνθεση:"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "12 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 12,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 17
+   },
+   "substitutes": {
+    "documentsWithOne": 17,
+    "replacedMemberAlsoListed": 17,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 39,
+     "dissentersOnly": 1,
+     "everyVoter": 0
+    },
+    "declarationsPct": 2,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a departure",
+    "a vote tally",
+    "mayor presence stated",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "The σύνθεση is an invitation roster naming everyone summoned, regular and substitute. There is no attendance list at all, so composition minus absent includes people who arrived later. That is why it reads cumulative, and it is the mechanism that manufactures wrong vote lists.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "athens",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 758,
+   "documentsRead": 40,
+   "meetingsSampled": 28,
+   "meetingsTotal": 28,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "4 cumulative : 33 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 37,
+    "anchor": "decision_number",
+    "anchorDissentPct": 5
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 98,
+    "carriesTallyPct": 92,
+    "namedVoters": {
+     "never": 12,
+     "dissentersOnly": 28,
+     "everyVoter": 0
+    },
+    "declarationsPct": 58,
+    "partialVotesPct": 5
+   },
+   "mayorPresenceStatedPct": 32,
+   "casesMissingFromCorpus": [
+    "a departure",
+    "a substitute",
+    "reordering",
+    "an out-of-agenda item"
+   ],
+   "reviewNote": "Present and absent at the roll call, then a separate line per arrival and departure, each pinned to a decision number. Additionally «Εκτός αιθούσης στις με αρ. 31 – 40 ΑΔΣ ο κ. …»: temporarily out of the room for a RANGE of decisions, which is not a departure — after a departure the person is gone for everything following. Changes during out-of-agenda items name only the section, not the item.",
+   "surveyWasWrong": "the out-of-room range was captured only as free text; the structured per-vote-absence flag stayed false."
+  },
+  {
+   "city": "chalandri",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 125,
+   "documentsRead": 35,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΜΜΕΤΕΧΟΝΤΕΣ",
+     "ΜΗ ΣΥΜΜΕΤΕΧΟΝΤΕΣ",
+     "ΜΗ ΣΥΜΜΕΤΕΧΟΥΣΕΣ",
+     "Π Α Ρ Ο Ν Τ Ε Σ",
+     "Α Π Ο Υ Σ Ε Σ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "0 cumulative : 5 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 5,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 35,
+    "replacedMemberAlsoListed": 35,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 97,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 34,
+     "dissentersOnly": 1,
+     "everyVoter": 0
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a departure",
+    "a vote tally",
+    "a declaration",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": "ΣΥΜΜΕΤΕΧΟΝΤΕΣ is an attendance list and does NOT contain late arrivals. In ΨΥ8ΨΩΗΔ-Υ7Κ, Ευθυμίου arrives during item 7 as a substitute for Λυμπεράτος and appears nowhere in it, while Λυμπεράτος sits in ΜΗ ΣΥΜΜΕΤΕΧΟΝΤΕΣ. Confirmed by reading the page.",
+   "surveyWasWrong": "cumulative on all 5 documents under Haiku — wrong. Sonnet corrects it to opening-only."
+  },
+  {
+   "city": "chalandri",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 291,
+   "documentsRead": 40,
+   "meetingsSampled": 30,
+   "meetingsTotal": 30,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΑΠΟΝΤΕΣ",
+     "ΠΑΡΟΝΤΕΣ",
+     "ΣΥΜΜΕΤΕΧΟΝΤΕΣ",
+     "ΜΗ ΣΥΜΜΕΤΕΧΟΝΤΕΣ",
+     "Π Α Ρ Ο Ν Τ Ε Σ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "0 cumulative : 32 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 36,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 25
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 88,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 28,
+     "dissentersOnly": 10,
+     "everyVoter": 2
+    },
+    "declarationsPct": 2,
+    "partialVotesPct": 2
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "a vote tally",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present, absent, and distinct sections for arrivals and departures. The mayor-president is on his own line among the present. At the end of the document it names every member present for that specific decision — so Chalandri, like Argos, states per-decision attendance directly.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "chania",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 1590,
+   "documentsRead": 40,
+   "meetingsSampled": 40,
+   "meetingsTotal": 77,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "1 cumulative : 18 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 23,
+    "anchor": "decision_number",
+    "anchorDissentPct": 4
+   },
+   "substitutes": {
+    "documentsWithOne": 37,
+    "replacedMemberAlsoListed": 21,
+    "replacedMemberNotListed": 15
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 39,
+     "dissentersOnly": 1,
+     "everyVoter": 0
+    },
+    "declarationsPct": 2,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "a vote tally",
+    "mayor presence stated",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "ΠΑΡΟΝΤΕΣ is the opening attendance and already includes substitutes WITHOUT marking them; the substitution is explained in prose below. The ΑΠΟΝΤΕΣ list is incomplete: an absent regular member replaced by a substitute can appear in neither list, and this does not show up as an arithmetic mismatch against the stated body size. OPEN QUESTION for the municipality.",
+   "surveyWasWrong": "contested 11:7 under Haiku — wrong. Sonnet corrects it to opening-only 1:18."
+  },
+  {
+   "city": "chania",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 842,
+   "documentsRead": 40,
+   "meetingsSampled": 39,
+   "meetingsTotal": 39,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 2,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ",
+     "Κατά την εκ νέου διαπίστωση απαρτίας ήταν παρόντες οι κατωτέρω δημοτικοί σύμβουλοι:",
+     "Απόντες ήταν οι κατωτέρω δημοτικοί σύμβουλοι:"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "17 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 36,
+    "anchor": "decision_number",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 7,
+    "replacedMemberAlsoListed": 7,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 98,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 32,
+     "dissentersOnly": 8,
+     "everyVoter": 0
+    },
+    "declarationsPct": 15,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a vote tally",
+    "a per-vote absence"
+   ],
+   "reviewNote": "ΣΥΝΘΕΣΗ with all members, and «Απουσίαζαν καθ' όλη τη διάρκεια της συνεδρίασης οι …» in the same paragraph with no section boundary. Arrivals and departures pinned to decision numbers. Out-of-agenda items announced up front: «Οι υπ' αριθμ. 1/2025 έως και 3/2025 αποφάσεις συζητήθηκαν ομόφωνα εκτός ημερήσιας διάταξης». The 4 documents reporting substitutes all embed another body's decision — reader leakage, discard.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "orestiada",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 40,
+   "documentsRead": 40,
+   "meetingsSampled": 0,
+   "meetingsTotal": 0,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ",
+     "ΑΠΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ"
+    ],
+    "presentListMeaning": "thin",
+    "evidence": "2 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 8,
+    "anchor": "this_document",
+    "anchorDissentPct": 38
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 98,
+    "carriesTallyPct": 18,
+    "namedVoters": {
+     "never": 33,
+     "dissentersOnly": 7,
+     "everyVoter": 0
+    },
+    "declarationsPct": 2,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "reordering"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "orestiada",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 189,
+   "documentsRead": 38,
+   "meetingsSampled": 17,
+   "meetingsTotal": 17,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ",
+     "ΑΠΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "0 cumulative : 23 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 25,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 24
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 87,
+    "carriesTallyPct": 13,
+    "namedVoters": {
+     "never": 33,
+     "dissentersOnly": 5,
+     "everyVoter": 0
+    },
+    "declarationsPct": 13,
+    "partialVotesPct": 3
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a substitute"
+   ],
+   "reviewNote": "Arrivals annotated inline inside the absent list, «(Προσήλθε στο 2ο Θέμα)». No departure found anywhere. The decision body includes transcript excerpts of the voting itself — ΨΧ6ΛΩΞΒ-Ν1Ο is a good example. Applies ministerial circular 108/2019, under which votes against a sole proposal count as άκυρες ψήφοι rather than opposition.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "papagos-cholargos",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 11,
+   "documentsRead": 40,
+   "meetingsSampled": 2,
+   "meetingsTotal": 2,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "Παρόντες",
+     "Απόντες"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 1,
+    "anchor": "nothing",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 11,
+    "replacedMemberAlsoListed": 3,
+    "replacedMemberNotListed": 8
+   },
+   "votes": {
+    "phraseStatedPct": 88,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 26,
+     "dissentersOnly": 14,
+     "everyVoter": 0
+    },
+    "declarationsPct": 28,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "a vote tally",
+    "reordering"
+   ],
+   "reviewNote": "Present and absent, but no absent example in our corpus. Expected to follow the substitution pattern of other committees; unverified.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "papagos-cholargos",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 14,
+   "documentsRead": 40,
+   "meetingsSampled": 2,
+   "meetingsTotal": 2,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "9 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 23,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 57
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 78,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 20,
+     "dissentersOnly": 20,
+     "everyVoter": 0
+    },
+    "declarationsPct": 22,
+    "partialVotesPct": 15
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "a vote tally",
+    "reordering",
+    "an out-of-agenda item"
+   ],
+   "reviewNote": "Present and absent in the roll call, then separate lines for arrivals and departures.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "samothraki",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 11,
+   "documentsRead": 10,
+   "meetingsSampled": 2,
+   "meetingsTotal": 2,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 0,
+    "anchor": null,
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 80,
+    "carriesTallyPct": 10,
+    "namedVoters": {
+     "never": 10,
+     "dissentersOnly": 0,
+     "everyVoter": 0
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 0,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "a departure",
+    "a substitute",
+    "named dissenters",
+    "a declaration",
+    "mayor presence stated",
+    "reordering",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present and absent, no substitute example. Only 10 documents from 2 meetings.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "samothraki",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 26,
+   "documentsRead": 22,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 0,
+    "anchor": null,
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 73,
+    "carriesTallyPct": 14,
+    "namedVoters": {
+     "never": 21,
+     "dissentersOnly": 1,
+     "everyVoter": 0
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 5
+   },
+   "mayorPresenceStatedPct": 95,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "a departure",
+    "a substitute",
+    "a declaration",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present and absent. No arrival or departure example anywhere.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "sparta",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 415,
+   "documentsRead": 40,
+   "meetingsSampled": 40,
+   "meetingsTotal": 46,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ",
+     "Π Α Ρ Ο Ν Τ Ε Σ",
+     "Α Π Ο Ν Τ Ε Σ",
+     "Π Α Ρ Ο Ν Σ Ε ΢"
+    ],
+    "presentListMeaning": "thin",
+    "evidence": "2 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 2,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 12,
+    "replacedMemberAlsoListed": 12,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 82,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 38,
+     "dissentersOnly": 1,
+     "everyVoter": 1
+    },
+    "declarationsPct": 5,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 18,
+   "casesMissingFromCorpus": [
+    "a departure",
+    "a vote tally",
+    "reordering"
+   ],
+   "reviewNote": null,
+   "surveyWasWrong": null
+  },
+  {
+   "city": "sparta",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 112,
+   "documentsRead": 37,
+   "meetingsSampled": 20,
+   "meetingsTotal": 20,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 3,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ",
+     "ΠΑΡΟΝΣΔ΢",
+     "ΑΠΟΝΣΔ΢",
+     "ΔΗΜΟΤΙΚΟΙ ΣΥΜΒΟΥΛΟΙ"
+    ],
+    "presentListMeaning": "cumulative",
+    "evidence": "29 cumulative : 2 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 32,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 34
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 76,
+    "carriesTallyPct": 5,
+    "namedVoters": {
+     "never": 30,
+     "dissentersOnly": 4,
+     "everyVoter": 3
+    },
+    "declarationsPct": 8,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 92,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present and absent, distinguishing physical from remote attendance (not something we need). Separate «προσελεύσεις-αποχωρήσεις» section. ΨΙΛΝΩ1Ν-ΞΒ8 is the hard case: the mayor is absent and RETURNS during item 3, and the same document records a change in discussion order.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "vrilissia",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 212,
+   "documentsRead": 40,
+   "meetingsSampled": 31,
+   "meetingsTotal": 31,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "Μη συμμετέχοντες-Απόντες :",
+     "Συμμετέχοντες:",
+     "Προσελεύσεις:",
+     "Αποχωρήσεις:",
+     "Συμμετέχοντες-Παρόντες"
+    ],
+    "presentListMeaning": "thin",
+    "evidence": "0 cumulative : 1 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 2,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 39,
+    "replacedMemberAlsoListed": 32,
+    "replacedMemberNotListed": 4
+   },
+   "votes": {
+    "phraseStatedPct": 82,
+    "carriesTallyPct": 82,
+    "namedVoters": {
+     "never": 37,
+     "dissentersOnly": 3,
+     "everyVoter": 0
+    },
+    "declarationsPct": 8,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a per-vote absence"
+   ],
+   "reviewNote": "Verbose form of the same pattern as Athens and Argos committees: «Συμμετέχοντες» and «Μη συμμετέχοντες-Απόντες», plus «Προσελεύσεις» and «Αποχωρήσεις». Substitutes appear under Συμμετέχοντες and the members they replace under Μη συμμετέχοντες.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "vrilissia",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 117,
+   "documentsRead": 40,
+   "meetingsSampled": 20,
+   "meetingsTotal": 20,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "Απόντες:",
+     "Συμμετέχοντες-Παρόντες",
+     "Παρόντες",
+     "Προσελεύσεις:",
+     "Αποχωρήσεις:"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "0 cumulative : 32 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 32,
+    "anchor": "session_phase",
+    "anchorDissentPct": 34
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 72,
+    "carriesTallyPct": 72,
+    "namedVoters": {
+     "never": 30,
+     "dissentersOnly": 4,
+     "everyVoter": 6
+    },
+    "declarationsPct": 25,
+    "partialVotesPct": 2
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a departure",
+    "a substitute",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present and absent roll call at the start, then arrivals and departures per subject.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "xylokastro",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 46,
+   "documentsRead": 40,
+   "meetingsSampled": 8,
+   "meetingsTotal": 8,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 2,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ",
+     "ΑΠΟΝΤΕΣ"
+    ],
+    "presentListMeaning": "untested",
+    "evidence": "0 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 0,
+    "anchor": null,
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 5,
+    "replacedMemberAlsoListed": 5,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 100,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 39,
+     "dissentersOnly": 0,
+     "everyVoter": 1
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 8,
+   "casesMissingFromCorpus": [
+    "an arrival",
+    "a departure",
+    "a vote tally",
+    "a declaration",
+    "reordering",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Clear ΠΑΡΟΝΤΕΣ and ΑΠΟΝΤΕΣ listing, inline. No notion of arrivals or departures at all: none in 40 documents across 24 meetings.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "xylokastro",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 203,
+   "documentsRead": 39,
+   "meetingsSampled": 24,
+   "meetingsTotal": 24,
+   "rollCall": {
+    "layout": "present_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΠΑΡΟΝΤΕΣ ΔΗΜΟΤΙΚΟΙ ΣΥΜΒΟΥΛΟΙ",
+     "ΑΠΟΝΤΕΣ ΔΗΜΟΤΙΚΟΙ ΣΥΜΒΟΥΛΟΙ",
+     "ΠΑΡΟΝΤΕΣ ΔΗΜΟΤΙΚΟΙ ΣΥΜΒΟΥΛΟΙ:",
+     "ΑΠΟΝΤΕΣ ΔΗΜΟΤΙΚΟΙ ΣΥΜΒΟΥΛΟΙ:"
+    ],
+    "presentListMeaning": "thin",
+    "evidence": "1 cumulative : 0 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 4,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 50
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 90,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 39,
+     "dissentersOnly": 0,
+     "everyVoter": 0
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "named dissenters",
+    "a vote tally",
+    "a declaration",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Present and absent at the start, arrivals and departures pinned to the agenda item.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "zografou",
+   "body": "Δημοτική Επιτροπή",
+   "corpusSize": 490,
+   "documentsRead": 40,
+   "meetingsSampled": 40,
+   "meetingsTotal": 48,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 15,
+    "headings": [
+     "ΜΕΛΗ ΔΗΜΟΤΙΚΗΣ ΕΠΙΤΡΟΠΗΣ",
+     "ΤΑΚΤΙΚΑ",
+     "ΑΝΑΠΛΗΡΩΜΑΤΙΚΑ",
+     "ΠΡΟΕΔΡΟΣ",
+     "MEΛΗ ΔΗΜΟΤΙΚΗΣ ΕΠΙΤΡΟΠΗΣ"
+    ],
+    "presentListMeaning": "thin",
+    "evidence": "2 cumulative : 1 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 5,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 27,
+    "replacedMemberAlsoListed": 27,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 92,
+    "carriesTallyPct": 0,
+    "namedVoters": {
+     "never": 37,
+     "dissentersOnly": 3,
+     "everyVoter": 0
+    },
+    "declarationsPct": 0,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 90,
+   "casesMissingFromCorpus": [
+    "a vote tally",
+    "a declaration",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Lists all members first, regular and substitute, then present and absent. More verbose than others about whether the mayor was present.",
+   "surveyWasWrong": null
+  },
+  {
+   "city": "zografou",
+   "body": "Δημοτικό Συμβούλιο",
+   "corpusSize": 190,
+   "documentsRead": 39,
+   "meetingsSampled": 18,
+   "meetingsTotal": 18,
+   "rollCall": {
+    "layout": "composition_and_absent",
+    "layoutDissentPct": 0,
+    "headings": [
+     "ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ"
+    ],
+    "presentListMeaning": "opening roll call only",
+    "evidence": "2 cumulative : 28 opening-only"
+   },
+   "attendanceChanges": {
+    "documentsRecordingOne": 33,
+    "anchor": "agenda_item",
+    "anchorDissentPct": 0
+   },
+   "substitutes": {
+    "documentsWithOne": 0,
+    "replacedMemberAlsoListed": 0,
+    "replacedMemberNotListed": 0
+   },
+   "votes": {
+    "phraseStatedPct": 92,
+    "carriesTallyPct": 3,
+    "namedVoters": {
+     "never": 32,
+     "dissentersOnly": 5,
+     "everyVoter": 2
+    },
+    "declarationsPct": 3,
+    "partialVotesPct": 0
+   },
+   "mayorPresenceStatedPct": 100,
+   "casesMissingFromCorpus": [
+    "a substitute",
+    "an out-of-agenda item",
+    "a per-vote absence"
+   ],
+   "reviewNote": "Same shape as the committee. States reordering of subjects when it happens — worth holding in the fixture even though our ordering comes from the transcript.",
+   "surveyWasWrong": null
+  }
+ ]
+}

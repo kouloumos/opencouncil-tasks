@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Body adjudication</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#F4F6F8;--card:#fff;--ink:#15191E;--soft:#4A545F;--faint:#7C8794;
+    --rule:#D8DEE5;--ruleSoft:#EAEEF2;
+    --blue:#2B5C93;--blueBg:#E7EEF7;
+    --amber:#B07A25;--amberBg:#FAF0DE;
+    --red:#A63D2F;--redBg:#FAE9E6;
+    --green:#2E6B4F;--greenBg:#E6F1EB;
+    --sans:"Commissioner",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#12161A;--card:#191E24;--ink:#E6EBF0;--soft:#A4B0BC;--faint:#78838F;
+    --rule:#2B333B;--ruleSoft:#222930;
+    --blue:#7FAEDD;--blueBg:#1A2734;--amber:#D9A551;--amberBg:#2C2418;
+    --red:#E08276;--redBg:#2E1D1B;--green:#6FBF97;--greenBg:#16241D;
+  }}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--paper);
+       display:grid;grid-template-columns:190px minmax(420px,1.35fr) minmax(380px,430px);height:100vh;overflow:hidden}
+
+  body.wide{grid-template-columns:0 1fr minmax(340px,380px)}
+  body.wide nav{display:none}
+  nav{border-right:1px solid var(--rule);overflow:auto;background:var(--card)}
+  .navhead{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--rule);padding:10px 12px;z-index:2}
+  .navhead button{font:inherit;font-size:12px;padding:4px 9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+  .navhead .prog{font-size:11.5px;color:var(--faint);margin-top:7px;font-variant-numeric:tabular-nums}
+  .city{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:12px 12px 4px;font-weight:600}
+  nav a{display:flex;align-items:center;gap:7px;padding:5px 12px;text-decoration:none;color:var(--ink);font-size:13px}
+  nav a:hover{background:var(--paper)}
+  nav a.cur{background:var(--blueBg);color:var(--blue);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--rule);flex:none}
+  .dot.part{background:var(--amber)}.dot.done{background:var(--green)}
+
+  main{border-right:1px solid var(--rule);display:flex;flex-direction:column;min-width:0;background:var(--paper)}
+  .docbar{display:flex;gap:5px;padding:8px;overflow-x:auto;border-bottom:1px solid var(--rule);background:var(--card);flex:none}
+  .docbar button{font:inherit;font-size:11.5px;font-family:var(--mono);padding:4px 8px;border:1px solid var(--rule);
+                 background:var(--paper);color:var(--soft);border-radius:3px;cursor:pointer;white-space:nowrap}
+  .docbar button.cur{border-color:var(--blue);color:var(--blue);background:var(--blueBg);font-weight:500}
+  .docbar button.arrival{border-left:3px solid var(--amber)}
+  .docbar button.notdec{border-left:3px solid var(--red)}
+  iframe{flex:1;width:100%;border:0;background:#fff}
+  .why{padding:8px 12px;background:var(--amberBg);color:var(--ink);font-size:13px;border-bottom:1px solid var(--rule);flex:none}
+  .why b{color:var(--amber);text-transform:uppercase;font-size:10px;letter-spacing:.1em;display:block;margin-bottom:2px}
+
+  aside{overflow:auto;padding:14px 16px 60px;background:var(--paper)}
+  h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+  .sub{color:var(--faint);font-size:12.5px;margin-bottom:14px}
+  .sub a{color:var(--blue)}
+  h2{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:20px 0 8px;font-weight:600}
+
+  .q{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:11px 13px;margin-bottom:9px}
+  .q.answered{border-left:3px solid var(--green)}
+  .q .qt{font-weight:600;font-size:13.5px;margin-bottom:3px}
+  .q .qh{font-size:12.5px;color:var(--soft);margin-bottom:8px;line-height:1.45}
+  .q .qh code{font-family:var(--mono);font-size:11.5px}
+  .opts{display:flex;flex-wrap:wrap;gap:5px}
+  .opts button{font:inherit;font-size:12px;padding:4px 9px;border:1px solid var(--rule);background:var(--paper);
+               color:var(--ink);border-radius:3px;cursor:pointer}
+  .opts button.sel{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+  .q textarea{width:100%;margin-top:7px;border:1px solid var(--rule);border-radius:3px;padding:5px 7px;
+              font:inherit;font-size:12.5px;background:var(--paper);color:var(--ink);resize:vertical;min-height:30px}
+  .sugg{font-size:11.5px;color:var(--faint);margin-top:6px}
+  .sugg b{color:var(--soft)}
+
+  table.kv{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--rule);border-radius:4px;font-size:12.5px}
+  table.kv td{padding:5px 10px;border-bottom:1px solid var(--ruleSoft);vertical-align:top}
+  table.kv tr:last-child td{border-bottom:none}
+  table.kv td:first-child{color:var(--faint);width:44%}
+  table.kv td:last-child{font-family:var(--mono);font-size:11.5px;word-break:break-word}
+  .hl{background:var(--amberBg)}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .chip{font-size:11.5px;border:1px solid var(--rule);border-radius:2px;padding:2px 7px;background:var(--card);color:var(--soft)}
+  .chip b{color:var(--ink);font-weight:600}
+  .chip.mono{font-family:var(--mono);font-size:11px}
+  .flagrow{display:flex;gap:6px;align-items:center;margin-top:8px}
+  .flagrow button{font:inherit;font-size:12px;padding:4px 9px;border:1px solid var(--rule);background:var(--card);color:var(--ink);border-radius:3px;cursor:pointer}
+  .flagrow button.on{background:var(--red);border-color:var(--red);color:#fff}
+  kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:3px;padding:0 4px;color:var(--faint)}
+
+  /* A value the reviewer can look up. Dotted underline, never a link colour:
+     it explains, it does not navigate away. */
+  .term{border-bottom:1px dotted var(--blue);cursor:help;color:var(--blue)}
+  .banner{border-radius:4px;padding:9px 12px;font-size:12.5px;line-height:1.5;margin-bottom:10px}
+  .banner.check{background:var(--amberBg);border-left:3px solid var(--amber)}
+  .banner.context{background:var(--card);border:1px solid var(--rule);color:var(--soft)}
+  .banner b{display:block;font-size:10px;letter-spacing:.11em;text-transform:uppercase;margin-bottom:2px}
+  h1{margin-bottom:1px}
+  aside h2:first-of-type{margin-top:4px}
+  .banner.check b{color:var(--amber)}
+  td.fieldflag{width:26px;text-align:center;padding:5px 4px}
+  td.fieldflag button{border:1px solid var(--rule);background:var(--card);color:var(--faint);border-radius:3px;
+                      cursor:pointer;font-size:11px;line-height:1;padding:2px 5px}
+  td.fieldflag button.on{background:var(--red);border-color:var(--red);color:#fff}
+
+  #answers{position:fixed;top:0;right:0;bottom:0;width:min(560px,94vw);background:var(--card);
+         border-left:1px solid var(--rule);box-shadow:-12px 0 40px -20px rgba(0,0,0,.5);
+         overflow:auto;padding:18px 22px 60px;z-index:49;transform:translateX(100%);transition:transform .16s ease}
+  #answers.open{transform:none}
+  #answers h3{margin:0 0 4px;font-size:17px}
+  #answers .close{position:absolute;top:14px;right:18px;border:1px solid var(--rule);background:var(--paper);
+                color:var(--ink);border-radius:3px;cursor:pointer;font:inherit;font-size:12px;padding:3px 9px}
+  .toolbar{display:flex;gap:6px;align-items:center;margin:0 0 14px;flex-wrap:wrap}
+  .toolbar button{font:inherit;font-size:12.5px;padding:5px 11px;border:1px solid var(--rule);background:var(--card);
+                  color:var(--ink);border-radius:3px;cursor:pointer}
+  .toolbar button.primary{border-color:var(--amber);background:var(--amberBg);color:var(--amber);font-weight:600}
+  .toolbar button.complete{border-color:var(--green);background:var(--greenBg);color:var(--green);font-weight:600}
+  .whatis{font-size:12px;color:var(--faint);line-height:1.45;margin:0 0 10px}
+  .verdict{border:1px solid var(--rule);border-left:3px solid var(--blue);border-radius:0 4px 4px 0;
+           padding:9px 12px;margin:10px 0;background:var(--card);font-size:12.5px;line-height:1.5}
+  .verdict.contested,.verdict.thin{border-left-color:var(--amber)}
+  .verdict.untested{border-left-color:var(--neutral,var(--faint))}
+  .verdict > b{display:block;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+  .vline{display:grid;grid-template-columns:112px 1fr;gap:9px;padding:2px 0}
+  .vline > span{color:var(--faint);font-size:11.5px;padding-top:1px}
+  #gloss{position:fixed;top:0;right:0;bottom:0;width:min(520px,92vw);background:var(--card);
+         border-left:1px solid var(--rule);box-shadow:-12px 0 40px -20px rgba(0,0,0,.5);
+         overflow:auto;padding:18px 22px 60px;z-index:50;transform:translateX(100%);transition:transform .16s ease}
+  #gloss.open{transform:none}
+  #gloss h3{margin:0 0 14px;font-size:17px}
+  #gloss .close{position:absolute;top:14px;right:18px;border:1px solid var(--rule);background:var(--paper);
+                color:var(--ink);border-radius:3px;cursor:pointer;font:inherit;font-size:12px;padding:3px 9px}
+  .gs{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:22px 0 8px;font-weight:600}
+  .gi{border:1px solid var(--rule);border-radius:4px;padding:10px 13px;margin-bottom:8px;background:var(--paper)}
+  .gi.hit{border-color:var(--blue);background:var(--blueBg)}
+  .gi .gk{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--blue);margin-bottom:4px}
+  .gi .gd{font-size:13px;line-height:1.5;color:var(--ink)}
+  .gi .gx{font-size:12.5px;line-height:1.5;color:var(--soft);margin-top:6px;font-style:italic}
+  .gi .gw{font-size:12.5px;line-height:1.5;color:var(--soft);margin-top:6px}
+  .gi .gw b{color:var(--ink);font-style:normal}
+</style></head><body>
+
+<nav><div class="navhead">
+  <button onclick="exportAll()">Export answers</button>
+  <button onclick="document.body.classList.toggle('wide')" title="give the document more room">⤢</button>
+  <div class="prog" id="prog"></div>
+</div><div id="navlist"></div></nav>
+
+<main>
+  <div class="docbar" id="docbar"></div>
+  <div class="why" id="why"></div>
+  <iframe id="pdf" title="decision document"></iframe>
+</main>
+
+<aside id="panel"></aside>
+<div id="answers"><button class="close" onclick="closeAnswers()">close ✕</button><div id="answersbody"></div></div>
+<div id="gloss"><button class="close" onclick="closeGloss()">close ✕</button><h3>What these values mean</h3><div id="glossbody"></div></div>
+
+<script>
+const DATA = __DATA__;
+const KEY = 'body-adjudication-v1';
+let store = {};
+try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch {}
+store.bodies = store.bodies || {}; store.docs = store.docs || {};
+const save = () => localStorage.setItem(KEY, JSON.stringify(store));
+
+let bi = 0, di = 0;
+const B = () => DATA.bodies[bi];
+const D = () => B().docs[di];
+
+
+/* Every enum value the survey can emit, in the reviewer's terms: what it means,
+   what it looks like on a Greek page, and why it changes what we can store. */
+const GLOSSARY = [
+ {sec:'What this panel is', items:[
+  {k:'what this panel is', d:'The survey\'s reading of what the page <b>contains</b> — whether the document states a thing, and in what form.',
+   x:'"roll call layout: composition_and_absent" says the page prints a whole-body roster; it does not list who was on it.',
+   w:'It is <b>not</b> the output of <code>extractDecisionFromPdf</code>, which pulls values: names, votes, the decision text. So this tells you <b>what extraction has to cope with</b> in this body, not how well extraction currently copes. The one production signal here is "already extracted in production", which says whether we hold an excerpt for this decision today.'},
+ ]},
+ {sec:'How the roll call is laid out', items:[
+  {k:'composition_and_absent', d:'The document prints a roster of the <b>whole body</b> — ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ, ΜΕΛΗ ΔΗΜΟΤΙΚΗΣ ΕΠΙΤΡΟΠΗΣ — naming every member whether or not they came, then names the absentees separately.',
+   x:'«ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ: ΓΡΙΒΑΣ ΓΕΩΡΓΙΟΣ, ΠΙΤΣΙΟΣ ΚΩΝΣΤΑΝΤΙΝΟΣ, … (Σύνολο 35 μέλη)» followed by «απουσίαζαν οι Δ.Σ. κ.κ. … (Σύνολο απόντων 10 μέλη)».',
+   w:'Who was <b>present</b> is never printed. It is the roster minus the absentees. So finding a name in the roster tells you nothing about whether they attended — which is exactly the trap the derived rule exists to avoid.'},
+  {k:'present_and_absent', d:'Two explicit lists: who came and who did not.',
+   x:'«ΠΑΡΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ: 1. ΧΑΤΖΗΠΑΝΑΓΙΩΤΟΥ ΕΜΜΑΝΟΥΗΛ …» and «ΑΠΟΝΤΕΣ ΣΥΜΒΟΥΛΟΙ: 1. ΤΣΕΛΕΜΠΗΣ ΔΗΜΗΤΡΙΟΣ …».',
+   w:'Presence is stated directly, so the present list can be read as-is. Watch for annotations inside the absent list such as «(ΠΡΟΣΗΛΘΕ ΣΤΟ 1ο ΘΕΜΑ)» — the person stays absent at the opening.'},
+  {k:'present_only', d:'Attendees are listed; absentees are not.',
+   x:'A committee that prints «Συμμετέχοντες-Παρόντες» and nothing else.',
+   w:'We cannot tell who was missing without the body membership from our own records, so a short list is undetectable from the document alone.'},
+  {k:'narrative_only', d:'Attendance appears only in prose, with no list.',
+   x:'«παρέστησαν ο Δήμαρχος κ. … και τα μέλη …».',
+   w:'Names have to be pulled out of a sentence, and the boundary between members and guests is often not marked.'},
+  {k:'absent', d:'The document carries no attendance information at all.', x:'', w:'Nothing to store, and nothing to reconcile against the body roster.'},
+ ]},
+ {sec:'What an arrival or departure is tied to', items:[
+  {k:'agenda_item', d:'The change is anchored to a numbered agenda item.',
+   x:'«Κατά τη διάρκεια της συζήτησης του 4ου τακτικού θέματος αποχώρησε ο Δ.Σ. κ. ΔΗΜΟΣ ΔΗΜΗΤΡΙΟΣ».',
+   w:'The <b>only</b> form the current schema can store. Everything below is read and then lost.'},
+  {k:'decision_number', d:'The change is anchored to a decision number rather than an agenda item.',
+   x:'«Αποχώρησαν στη με αρ. 399 ΑΔΣ οι κ.κ. Β. Μπάρκα, Ν. Αβραμίδης» · «Πριν την 1/2025 απόφαση αποχώρησαν…».',
+   w:'Placing it needs the decision number resolved to a subject first. Today it arrives with a null agenda item, and a null-item change is treated as present throughout — so the departure silently never happens.'},
+  {k:'clock_time', d:'The change is anchored to a wall-clock time.',
+   x:'«Στις 20:15 αποχώρησε ο δημοτικός σύμβουλος …».',
+   w:'Only placeable against the transcript timeline, not the agenda.'},
+  {k:'session_phase', d:'The change is anchored to a stretch of the session rather than one item.',
+   x:'«Προσήλθε κατά τη συζήτηση των εκτός ημερήσιας διάταξης θεμάτων ο κ. Ν. Λαλιώτης».',
+   w:'Covers a span of several items, so it cannot be pinned to one without deciding which items that phase contained.'},
+  {k:'nothing', d:'A change is recorded with no anchor of any kind.',
+   x:'«Αποχώρησε ο κ. Χ.» with nothing tying it to a moment.',
+   w:'Unplaceable in principle. The person is currently counted present for every subject of the meeting.'},
+  {k:'— (null)', d:'This document records no arrival or departure at all.', x:'', w:'Not the same as "nothing": there is no change to place.'},
+ ]},
+ {sec:'Who is named in the vote', items:[
+  {k:'none', d:'No individual voter is named.',
+   x:'«ΑΠΟΦΑΣΙΖΕΙ ΟΜΟΦΩΝΑ» and nothing more.',
+   w:'This is the case where the minutes manufacture a named ΥΠΕΡ list: every person believed present is given a FOR vote because of the word ομόφωνα.'},
+  {k:'dissenters_only', d:'Only those who broke from the majority are named.',
+   x:'«ΛΕΥΚΟ ψήφισαν οι Δ.Σ. κ.κ. ΜΕΤΙΚΑΡΙΔΗΣ ΘΕΟΔΩΡΟΣ, …».',
+   w:'The FOR side is still inferred, so the same manufacture happens for everyone not named.'},
+  {k:'all', d:'Every voter is named with their position.', x:'', w:'The only case where the vote lists in the minutes are read rather than derived.'},
+ ]},
+ {sec:'The present-set verdict, and how it is derived', items:[
+  {k:'late arrival found', d:'The person named as arriving after the session opened, and which of three lists that name is in. Evidence, not a judgement: the verdict below is computed from these flags.',
+   x:'«Κ. Ευθυμίου · present list: false · roster: false · absent: false» → opening only.',
+   w:'The three are separate on purpose. A participating list is an attendance record; a whole-body roster is an invitation and says nothing about attendance. Merging them read Chalandri and Chania as cumulative when both are opening-only. Verify by finding the name yourself: if a flag is wrong, the body answer can flip.'},
+  {k:'→ no verdict (contradictory or unplaceable)', d:'The flags do not support a conclusion.',
+   x:'A name reported as being in both the present and the absent list.',
+   w:'Nobody is in both, so such a reading means the name was never looked up. It is excluded from the evidence rather than counted, which is why some bodies show fewer testing documents than they have arrivals.'},
+  {k:'→ cumulative', d:'This body\'s present set already contains people who arrived late, so it means "attended at any point".',
+   x:'', w:'Derived when the person is in the present list (explicit layout), or in the roster and NOT among the absentees (composition layout).'},
+  {k:'→ opening only', d:'This body\'s present set is the opening roll call, and a late arriver is not in it.',
+   x:'', w:'Derived when the person is absent at the opening. This is the commoner case, and the one the pipeline currently assumes for everyone.'},
+ ]},
+ {sec:'Facts the documents state that we cannot store', items:[
+  {k:'perVoteAbsenceStated', d:'Members named as out of the room for <b>this vote alone</b>, which is not the same as a departure.',
+   x:'«Κατά τη διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι …».',
+   w:'Changes who actually voted on that item. No field holds it, so those people are currently counted as voting.'},
+  {k:'substitutesPresent', d:'An αναπληρωματικό μέλος standing in for a regular member.',
+   x:'«ΤΣΙΑΜΠΑΣ ΑΘΑΝΑΣΙΟΣ (σε αντικατάσταση του τακτικού μέλους κ. Χ. Αγαπητού)».',
+   w:'Where the replaced member is ALSO listed absent, present plus absent exceeds the body size — so a roster check must know this body\'s convention before it fires.'},
+  {k:'declarationsRecorded', d:'ΠΑΡΩΝ or ΑΠΟΧΗ recorded as a position in the vote.',
+   x:'«με ΥΠΕΡ 30 ψήφους, ΚΑΤΑ 1 ψήφο και ΑΠΟΧΗ 1».',
+   w:'A declaration is not a vote. Collapsing it into FOR/AGAINST misstates both the tally and the person\'s position.'},
+  {k:'votePhraseCarriesCounts', d:'The vote phrase states a number, not just a word.',
+   x:'«Κατά πλειοψηφία με ψήφους 21 υπέρ και 2 κατά».',
+   w:'That number could validate the name list inference produces. The phrase is never persisted, so nothing checks it.'},
+  {k:'participationModePerMember', d:'Each attendee marked as in person or remote.',
+   x:'A ΠΑΡΟΝΤΕΣ table with a «Τρόπος Παρουσίας» column reading «Δια ζώσης» or «Τηλεδ/ψη».',
+   w:'Nowhere in the schema. Relevant to whether someone could vote at a given moment.'},
+  {k:'mayorPresenceStated', d:'The mayor\'s presence or absence stated in prose, separately from the members.',
+   x:'«Ο Δήμαρχος … προσκλήθηκε νομίμως και παρέστη».',
+   w:'The mayor is excluded from every per-subject vote list in the minutes, so resolving the wrong person removes the wrong councillor.'},
+  {k:'embeddedOtherBodyDecision', d:'Another body\'s decision reproduced in full inside this one, with its own attendance list.',
+   x:'A council decision quoting the Δημοτική Επιτροπή decision it approves.',
+   w:'A second roll call on the page that must not be mistaken for this session\'s.'},
+  {k:'discussionOrderStated', d:'The document says items were taken out of agenda order.',
+   x:'«τα τακτικά θέματα 21ο, 22ο και 23ο να συζητηθούν μετά το 7ο».',
+   w:'Drives the entire attendance replay. When it is missing the pipeline assumes out-of-agenda items came first, then numerical order.'},
+  {k:'isAdvisoryOpinion', d:'The operative verb is ΓΝΩΜΟΔΟΤΕΙ, an opinion, not ΑΠΟΦΑΣΙΖΕΙ, a decision.',
+   x:'«ΓΝΩΜΟΔΟΤΕΙ ΟΜΟΦΩΝΑ».',
+   w:'Not a decision at all. The pipeline\'s decision marker does not fire on it.'},
+  {k:'correctedRepost', d:'A corrected republication superseding an earlier one.', x:'«ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ».',
+   w:'Two ADAs describe one act, and nothing records which supersedes which.'},
+  {k:'withdrawnItemsStated', d:'An agenda item pulled before discussion.',
+   x:'«Μεταβολές: Μετά από πρόταση του Προέδρου τα θέματα 7 και 8 αποσύρθηκαν».',
+   w:'A subject that will never have a decision, which currently looks identical to one we failed to find.'},
+  {k:'partialOrPerLineVote', d:'A vote that differs per budget line, or a decides clause carried by different majorities.',
+   x:'«Υπέρ του πίνακα εσόδων και υπερ των α/α 3,5,6,… και καταψηφίζουν τους υπόλοιπους».',
+   w:'One position per decision cannot express it; today it is flattened to a single value.'},
+  {k:'isDeliberativeDecision = false', d:'The reading judged this document not to be a decision of a deliberative session at all.',
+   x:'An agenda, an invitation, a mayoral act, a posting certificate.',
+   w:'It is nonetheless linked to a subject in our database. Either the reading is wrong or the link is — worth deciding which.'},
+ ]},
+];
+function openGloss(key){
+  const body = document.getElementById('glossbody');
+  body.innerHTML = GLOSSARY.map(g => `<div class="gs">${g.sec}</div>` + g.items.map(it =>
+    `<div class="gi ${it.k===key?'hit':''}" id="g-${cssid(it.k)}">
+       <div class="gk">${esc(it.k)}</div><div class="gd">${it.d}</div>
+       ${it.x?`<div class="gx">${esc(it.x)}</div>`:''}
+       ${it.w?`<div class="gw">${it.w}</div>`:''}
+     </div>`).join('')).join('');
+  document.getElementById('gloss').classList.add('open');
+  if (key){ const el = document.getElementById('g-'+cssid(key)); if (el) el.scrollIntoView({block:'center'}); }
+}
+function cssid(k){ return k.replace(/[^A-Za-z0-9]/g,'_'); }
+function closeGloss(){ document.getElementById('gloss').classList.remove('open'); }
+const term = (v) => v===null||v===undefined||v===''
+  ? '—' : `<span class="term" onclick="openGloss(${JSON.stringify(String(v)).replace(/"/g,'&quot;')})">${esc(v)}</span>`;
+
+/* The questions a body must answer before its documents can be labelled. */
+const QUESTIONS = [
+  { id:'rollCallMeaning', t:'When someone arrives late, is the present list already showing them?',
+    h:'Decides whether this body’s present list is everyone who attended, or only the opening roll call. With a whole-body roster, being in the roster is membership, not attendance.',
+    opts:['cumulative','opening roll call only','no arrivals ever recorded','varies by document'] },
+  { id:'changePinnedTo', t:'What is an arrival or departure tied to?',
+    h:'A change with no anchor cannot be placed in time, and today the pipeline reads it and then treats the person as present throughout.',
+    opts:['agenda item','decision number','clock time','session phase','nothing','no changes recorded'] },
+  { id:'rollCallForm', t:'How is the roll call laid out?',
+    h:'A whole-body roster plus absentees is a different fact from explicit present and absent lists.',
+    opts:['composition + absent','present + absent','present only','narrative only','varies by document'] },
+  { id:'substitutionConvention', t:'When a substitute stands in, who is listed?',
+    h:'A separate axis from the arrivals question. If both the substitute and the member they replace appear, present plus absent exceeds the body size, and any roster check must expect that.',
+    opts:['substitute present, replaced member listed absent','substitute only, replaced member not listed','no substitutes used','varies'] },
+  { id:'rosterCoversBody', t:'Does the roll call name every member of the body?',
+    h:'If it does, the roster can be reconciled against the body’s membership and a short list is detectable.',
+    opts:['yes','no','varies'] },
+];
+
+function bodyStatus(b){
+  const a = store.bodies[b.key] || {};
+  const n = QUESTIONS.filter(q => a[q.id]).length;
+  return n === 0 ? '' : n === QUESTIONS.length ? 'done' : 'part';
+}
+function renderNav(){
+  let h = '', city = null;
+  DATA.bodies.forEach((b,i) => {
+    if (b.cityName !== city) { city = b.cityName; h += `<div class="city">${esc(city)}</div>`; }
+    h += `<a href="#" class="${i===bi?'cur':''}" onclick="goBody(${i});return false">
+            <span class="dot ${bodyStatus(b)}"></span>${esc(shortBody(b.body))}</a>`;
+  });
+  document.getElementById('navlist').innerHTML = h;
+  const done = DATA.bodies.filter(b => bodyStatus(b) === 'done').length;
+  document.getElementById('prog').textContent = `${done} of ${DATA.bodies.length} bodies answered`;
+}
+function shortBody(n){
+  return n.replace('Δημοτικό Συμβούλιο','Συμβούλιο').replace('Δημοτική Επιτροπή','Επιτροπή').replace('Δημοτική Κοινότητα','Κοινότητα');
+}
+function renderDocs(){
+  const b = B();
+  document.getElementById('docbar').innerHTML = b.docs.map((d,i) =>
+    `<button class="${i===di?'cur ':''}${d.kind==='arrival'?'arrival':d.kind==='notdec'?'notdec':''}"
+      onclick="goDoc(${i})" title="${esc(d.why)}">${esc(d.ada)}${store.docs[d.ada]?.misread||Object.values(store.docs[d.ada]?.fields||{}).some(Boolean)?' ⚑':''}</button>`).join('');
+  const d = D();
+  document.getElementById('why').innerHTML = d ? `<b>why this document</b>${esc(d.why)}` : '';
+  document.getElementById('pdf').src = d ? d.pdf + '#zoom=page-width&pagemode=none' : 'about:blank';
+}
+
+function suggestion(b, qid){
+  if (qid === 'rollCallMeaning'){
+    if (b.withArrival === 0) return b.withChanges > 0
+      ? `Model: no arrival in ${b.read} documents, though ${b.withChanges} record a change. Departures only.`
+      : `Model: no attendance change at all in ${b.read} documents.`;
+    return `Model: ${b.cumulative} cumulative vs ${b.openingOnly} opening-only, from ${b.withArrival} documents with an arrival across ${b.meetingsSampled} meetings.`;
+  }
+  if (qid === 'changePinnedTo') return `Model: ${b.dominantPin ?? 'none observed'}${b.pinDissent ? `, with ${b.pinDissent}% of documents differing` : ''}.`;
+  if (qid === 'rollCallForm') return `Model: ${b.dominantForm ?? '—'}${b.formDissent ? `, with ${b.formDissent}% differing` : ''}.`;
+  return '';
+}
+
+/* My reading of this body, stated up front so the reviewer can disagree with a
+   claim rather than reconstruct it from 15 documents. Confidence is the
+   evidence behind it, never a number pulled from nowhere. */
+function verdictBlock(b){
+  const ev = b.cumulative + b.openingOnly;
+  let rc, cls;
+  if (ev === 0){
+    rc = b.withChanges > 0
+      ? `<b>untestable here.</b> ${b.withChanges} of ${b.read} documents record a change, none an arrival — departures only, so nothing tests it.`
+      : `<b>untestable here.</b> No attendance change at all in ${b.read} documents.`;
+    cls = 'untested';
+  } else if (ev < 5){
+    rc = `<b>${b.cumulative > b.openingOnly ? 'cumulative' : 'opening roll call only'}</b>, but on only ${ev} document${ev>1?'s':''}. Too thin to rely on.`;
+    cls = 'thin';
+  } else {
+    const share = b.cumulative / ev;
+    if (share >= 0.2 && share <= 0.8){
+      rc = `<b>contested.</b> ${b.cumulative} documents read cumulative, ${b.openingOnly} read opening-only. The body's own documents disagree.`;
+      cls = 'contested';
+    } else {
+      rc = `<b>${b.cumulative > b.openingOnly ? 'cumulative' : 'opening roll call only'}</b>, ${Math.max(b.cumulative,b.openingOnly)} of ${ev} documents agreeing.`;
+      cls = b.cumulative > b.openingOnly ? 'cumulative' : 'opening';
+    }
+  }
+
+  let sub;
+  if (b.withSubstitutes === 0){
+    sub = `<b>no substitutes</b> in any of ${b.read} documents.`;
+  } else {
+    const both = b.replacedAlsoListed, only = b.replacedNotListed;
+    const shape = both > only ? 'both the substitute and the replaced member are listed'
+                : only > both ? 'only the substitute is listed'
+                : 'inconsistent';
+    sub = `substitutes in <b>${Math.round(100*b.withSubstitutes/b.read)}%</b> of documents; ${shape} (${both} vs ${only}).`
+        + (b.sizedDocs ? ` Present + absent exceeds the stated body size in <b>${b.countsExceedBodySize} of ${b.sizedDocs}</b> documents that state a size.` : '');
+  }
+
+  const pin = b.dominantPin
+    ? `<b>${esc(b.dominantPin)}</b>${b.pinDissent ? `, though ${b.pinDissent}% of documents differ` : ''}`
+    : 'no change recorded';
+
+  return `<div class="verdict ${cls}">
+    <b>my reading of this body</b>
+    <div class="vline"><span>present set</span> ${rc}</div>
+    <div class="vline"><span>substitutes</span> ${sub}</div>
+    <div class="vline"><span>changes pinned to</span> ${pin}</div>
+    <div class="vline"><span>layout</span> ${term(b.dominantForm)}${b.formDissent?` · ${b.formDissent}% of documents differ`:''}</div>
+  </div>`;
+}
+
+function renderAnswers(){
+  const b = B(); const a = store.bodies[b.key] || {};
+  let h = `<h3>${esc(b.cityName)} · ${esc(shortBody(b.body))}</h3>
+    <div class="whatis">Answered once for the whole body, from everything you have seen across its documents. The model's reading is shown as a suggestion; nothing is preselected.</div>`;
+  for (const q of QUESTIONS){
+    const val = a[q.id];
+    h += `<div class="q ${val?'answered':''}">
+      <div class="qt">${esc(q.t)}</div><div class="qh">${q.h}</div>
+      <div class="opts">${q.opts.map(o =>
+        `<button class="${val===o?'sel':''}" onclick="ans('${q.id}',${JSON.stringify(o).replace(/"/g,'&quot;')})">${esc(o)}</button>`).join('')}</div>
+      <div class="sugg">${esc(suggestion(b,q.id))}</div>
+      <textarea placeholder="note (what in the document decided it)" oninput="note('${q.id}',this.value)">${esc(a[q.id+'_note']||'')}</textarea>
+    </div>`;
+  }
+  document.getElementById('answersbody').innerHTML = h;
+}
+function openAnswers(){ renderAnswers(); document.getElementById('answers').classList.add('open'); }
+function closeAnswers(){ document.getElementById('answers').classList.remove('open'); }
+
+function renderPanel(){
+  const b = B(), d = D();
+  const a = store.bodies[b.key] || {};
+  const answered = QUESTIONS.filter(q => a[q.id]).length;
+  let h = `<h1>${esc(b.cityName)} · ${esc(shortBody(b.body))}</h1>
+    <div class="sub">${b.read}/${b.corpusSize} read · <b>${b.meetingsSampled}/${b.meetings} meetings</b> · ${b.withChanges} with a change · ${b.withArrival} with an arrival${b.notDecisions?` · ${b.notDecisions} not decisions`:''}
+    ${b.meetings===1?'<br><span style="color:var(--red)">Only one meeting with linked decisions — nothing here generalises.</span>':''}</div>`;
+
+  h += verdictBlock(b);
+  h += `<div class="toolbar">
+      <button class="${answered===QUESTIONS.length?'complete':'primary'}" onclick="openAnswers()">
+        Body answers · ${answered} of ${QUESTIONS.length}</button>
+      <button onclick="openGloss()">Glossary</button>
+    </div>`;
+
+  if (d){
+    const o = d.o;
+    const verdict = d.derived === null ? '→ no verdict (contradictory or unplaceable)' : d.derived ? '→ cumulative' : '→ opening only';
+    const fl = (f) => (store.docs[d.ada]?.fields||{})[f] ? 'on' : '';
+    const flagBtn = (f) => `<td class="fieldflag"><button class="${fl(f)}" title="this reading is wrong" onclick="fieldflag('${f}')">✗</button></td>`;
+
+    h += `<h2>What this document states <span class="term" style="text-transform:none;letter-spacing:0;font-weight:400" onclick="openGloss('what this panel is')">what is this?</span></h2>
+      <div class="sub"><a href="https://diavgeia.gov.gr/doc/${encodeURIComponent(d.ada)}" target="_blank">${esc(d.ada)} on Diavgeia</a>
+      · ${d.pages} pages${d.meetingDate?` · meeting ${esc(d.meetingDate)}`:''}${d.agendaItemIndex!==null&&d.agendaItemIndex!==undefined?` · agenda item ${d.agendaItemIndex}`:''}</div>
+
+      <div class="banner check"><b>check these three — they set the body's answer</b>Mark ✗ on a wrong reading. Below is context to skim.</div>
+      <table class="kv">
+        ${rowF('late arrival found', o.lateArrivalCheck
+            ? `${esc(o.lateArrivalCheck.name)}<br>in the present list: <b>${o.lateArrivalCheck.appearsInPresentList}</b><br>in a whole-body roster: <b>${o.lateArrivalCheck.appearsInCompositionRoster}</b><br>in the absent list: <b>${o.lateArrivalCheck.appearsInAbsentList}</b><br>${term(verdict)}`
+            : 'none in this document', flagBtn('lateArrivalCheck'), true)}
+        ${rowF('roll call layout', term(o.rollCallForm), flagBtn('rollCallForm'), true)}
+        ${rowF('change pinned to', term(o.attendanceChangePinnedTo ?? '— (null)'), flagBtn('attendanceChangePinnedTo'), true)}
+      </table>
+
+      <div class="banner context"><b>context</b>Cross-checked against our database; a comparison shows only when the two disagree.</div>
+      <table class="kv">
+        ${rowF('roll call headings', esc((o.rollCallHeadings||[]).join('  ·  ')), flagBtn('rollCallHeadings'))}
+        ${rowF('stated body size', o.statedBodySize ?? '—', flagBtn('statedBodySize'))}
+        ${rowF('present / absent counted', `${o.presentCount ?? '—'} / ${o.absentCount ?? '—'}`, flagBtn('counts'))}
+        ${rowF('vote phrase', esc(o.votePhrase ?? '—'), flagBtn('votePhrase'))}
+        ${rowF('named voters', term(o.namedVoters), flagBtn('namedVoters'))}
+        ${rowF('decision number read', `${esc(o.decisionNumberAsPrinted ?? '—')}${cmp(o.decisionNumberAsPrinted, d.dbDecisionNumber)}`, flagBtn('decisionNumber'))}
+        ${rowF('agenda item read', `${o.agendaItemNumber ?? '—'}${o.isOutOfAgenda?' (out of agenda)':''}${cmp(o.agendaItemNumber, d.agendaItemIndex)}`, flagBtn('agendaItemNumber'))}
+        ${rowF('non-voting attendees', esc((o.nonVotingAttendees||[]).join(' · ') || '—'), flagBtn('nonVotingAttendees'))}
+        ${rowF('is a deliberative decision', term(o.isDeliberativeDecision ? 'true' : 'isDeliberativeDecision = false'), flagBtn('isDeliberativeDecision'))}
+      </table>
+
+      <div class="banner context"><b>facts claimed · each is a schema requirement</b>Click to read what it means.</div>
+      <div class="chips">${['perVoteAbsenceStated','declarationsRecorded','substitutesPresent','participationModePerMember','discussionOrderStated','withdrawnItemsStated','correctedRepost','embeddedOtherBodyDecision','isAdvisoryOpinion','partialOrPerLineVote','mayorPresenceStated']
+        .filter(k=>o[k]).map(k=>`<span class="chip term" onclick="openGloss('${k}')"><b>${k}</b></span>`).join('') || '<span class="chip">none claimed</span>'}</div>
+      <div class="flagrow">
+        <button class="${store.docs[d.ada]?.misread?'on':''}" onclick="flag()">⚑ this whole reading is unusable</button>
+        <button onclick="openGloss()">open the glossary</button>
+      </div>
+      <textarea style="width:100%;margin-top:6px;min-height:30px;border:1px solid var(--rule);border-radius:3px;padding:5px 7px;font:inherit;font-size:12.5px;background:var(--card);color:var(--ink)"
+        placeholder="what it actually says" oninput="docnote(this.value)">${esc(store.docs[d.ada]?.note||'')}</textarea>`;
+    if (o.unusual?.length){
+      h += `<h2>Reader also noted</h2><div class="chips">${o.unusual.slice(0,6).map(u=>`<span class="chip">${esc(u)}</span>`).join('')}</div>`;
+    }
+  }
+
+  h += `<h2>This body overall</h2><div class="chips">
+    ${b.headings.map(x=>`<span class="chip mono"><b>${esc(x.heading)}</b> ${x.count}</span>`).join('')}</div>
+    <div class="chips">${Object.entries(b.presence).map(([k,v])=>`<span class="chip">${k} <b>${v}%</b></span>`).join('')}</div>
+    <div class="sugg" style="margin-top:12px"><kbd>j</kbd> <kbd>k</kbd> documents · <kbd>n</kbd> <kbd>p</kbd> bodies · <kbd>a</kbd> body answers · <kbd>?</kbd> glossary · <kbd>esc</kbd> close</div>`;
+
+  document.getElementById('panel').innerHTML = h;
+  document.getElementById('panel').scrollTop = 0;
+}
+const row = (k,v) => `<tr><td>${esc(k)}</td><td>${v===null||v===undefined||v===''?'—':esc(v)}</td></tr>`;
+const rowF = (k,v,flag,hl) => `<tr class="${hl?'hl':''}"><td>${esc(k)}</td><td>${v===null||v===undefined||v===''?'—':v}</td>${flag}</tr>`;
+/* Show the database value beside the read one only when they disagree — an
+   agreeing cross-check is noise, a disagreeing one is the whole point. */
+function cmp(read, db){
+  if (db === null || db === undefined || db === '') return '';
+  if (String(read) === String(db)) return ' <span style="color:var(--faint)">= our DB</span>';
+  return ` <span style="color:var(--amber)">≠ our DB: ${esc(db)}</span>`;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function ans(id,v){ const k=B().key; store.bodies[k]=store.bodies[k]||{}; store.bodies[k][id]= store.bodies[k][id]===v?undefined:v; save(); renderNav(); renderAnswers(); renderPanel(); }
+function note(id,v){ const k=B().key; store.bodies[k]=store.bodies[k]||{}; store.bodies[k][id+'_note']=v; save(); }
+function fieldflag(f){ const a=D().ada; store.docs[a]=store.docs[a]||{}; store.docs[a].fields=store.docs[a].fields||{};
+  store.docs[a].fields[f]=!store.docs[a].fields[f]; save(); renderDocs(); renderPanel(); }
+function flag(){ const a=D().ada; store.docs[a]=store.docs[a]||{}; store.docs[a].misread=!store.docs[a].misread; save(); renderDocs(); renderPanel(); }
+function docnote(v){ const a=D().ada; store.docs[a]=store.docs[a]||{}; store.docs[a].note=v; save(); }
+function goBody(i){ bi=i; di=0; closeAnswers(); renderNav(); renderDocs(); renderPanel(); }
+function goDoc(i){ if(i<0||i>=B().docs.length) return; di=i; renderDocs(); renderPanel(); }
+function exportAll(){
+  const out = { answeredAt:new Date().toISOString(), bodies:{}, documents:store.docs };
+  for (const b of DATA.bodies) if (store.bodies[b.key]) out.bodies[b.key]=store.bodies[b.key];
+  const blob = new Blob([JSON.stringify(out,null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='body-adjudication.json'; a.click();
+}
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA') return;
+  if(e.key==='Escape'){ closeGloss(); closeAnswers(); }
+  if(e.key==='a') openAnswers();
+  if(e.key==='?') openGloss();
+  if(e.key==='j') goDoc(di+1); if(e.key==='k') goDoc(di-1);
+  if(e.key==='n') goBody(Math.min(bi+1,DATA.bodies.length-1));
+  if(e.key==='p') goBody(Math.max(bi-1,0));
+});
+renderNav(); renderDocs(); renderPanel();
+</script></body></html>

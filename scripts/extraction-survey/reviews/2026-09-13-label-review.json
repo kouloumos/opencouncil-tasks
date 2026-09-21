@@ -1,0 +1,707 @@
+{
+ "reviewedAt": "2026-09-13T19:09:32.981Z",
+ "documents": {
+  "Ψ3ΣΥΩ6Μ-ΘΔ3": {
+   "city": "athens",
+   "body": "3η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "6ΝΛΕΩ6Μ-ΛΣΤ": {
+   "city": "athens",
+   "body": "3η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration stored as a vote",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored ['AGAINST', 'AGAINST', 'ABSTAIN']",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΨΒΑΔΩ6Μ-ΚΡΙ": {
+   "city": "athens",
+   "body": "4η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #3",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "97ΜΗΩ6Μ-ΠΑΦ": {
+   "city": "athens",
+   "body": "4η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "survey is right",
+     "correctValue": "the text actually say that this is the first out of agenda item"
+    }
+   ]
+  },
+  "Ρ7Κ4Ω6Μ-ΚΨΘ": {
+   "city": "athens",
+   "body": "5η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΨΗ9ΕΩ6Μ-ΠΟ3": {
+   "city": "athens",
+   "body": "6η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #2",
+     "verdict": "survey is right",
+     "correctValue": "it's the second out of agenda item"
+    },
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "9Ω5ΟΩ6Μ-ΚΟΥ": {
+   "city": "athens",
+   "body": "6η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration stored as a vote",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored ['FOR', 'FOR', 'FOR', 'FOR', 'FOR', 'FOR']",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΡΘΙΖΩ6Μ-ΨΨ0": {
+   "city": "athens",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "no decision text",
+     "detail": "extraction returned an empty excerpt",
+     "verdict": "survey is right",
+     "correctValue": null
+    },
+    {
+     "priority": "P2",
+     "what": "flagged truncated",
+     "detail": "extraction could not reach the decision",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "Ψ75ΤΩ6Μ-6ΔΡ": {
+   "city": "athens",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "extraction is right",
+     "correctValue": "this was the only item of the agenda so the wording is different \"Εισάγεται από την Ημερήσια Διάταξη το μοναδικό θέμα αυτής που αφορά ...\""
+    }
+   ]
+  },
+  "Ψ9ΒΦΩ6Μ-ΟΘΥ": {
+   "city": "athens",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration stored as a vote",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored ['AGAINST', 'ABSTAIN', 'ABSTAIN']",
+     "verdict": "extraction is right",
+     "correctValue": "extraction got the against and abstain and the rest voted υπερ"
+    },
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «επί συνόλου παρευρισκόμενων 30 Δημοτικών» stored «Κατά πλειοψηφία»",
+     "verdict": "extraction is right",
+     "correctValue": "not sure what the correct is here"
+    }
+   ]
+  },
+  "ΨΤΠ4ΩΗΔ-ΣΨΓ": {
+   "city": "chalandri",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "survey is right",
+     "correctValue": "it was the first out of agenda"
+    }
+   ]
+  },
+  "Ψ5ΜΟΩΗ5-Ν03": {
+   "city": "chania",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #9",
+     "verdict": "neither is right",
+     "correctValue": "tehre is no agenda number"
+    }
+   ]
+  },
+  "Ψ6Λ7ΩΗ5-1Υ0": {
+   "city": "chania",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "neither is right",
+     "correctValue": "there is no agenda number"
+    }
+   ]
+  },
+  "6ΝΕ1ΩΞΒ-Υ0Σ": {
+   "city": "orestiada",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #2",
+     "verdict": "not resolvable from this page",
+     "correctValue": "ignore this specific document, is older"
+    }
+   ]
+  },
+  "9ΝΡΔΩΞΒ-ΨΟΛ": {
+   "city": "orestiada",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "neither is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "9ΨΨ9ΩΞ1-ΙΧΦ": {
+   "city": "papagos-cholargos",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "neither is right",
+     "correctValue": "no agenda number is mentioned"
+    }
+   ]
+  },
+  "ΨΙΤ4ΩΞ1-7ΑΚ": {
+   "city": "papagos-cholargos",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration stored as a vote",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored ['ABSTAIN', 'ABSTAIN']",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "6ΘΘΘΩΞ1-ΨΣΖ": {
+   "city": "papagos-cholargos",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "survey is right",
+     "correctValue": "it's out of agenda item -- it seems that on out of agenda"
+    },
+    {
+     "priority": "P2",
+     "what": "attendance change dropped",
+     "detail": "page records one, extraction returned none",
+     "verdict": "survey is right",
+     "correctValue": "this is a bit more complex cause it's at the very end of the page, so i wonder if we lost it in other documetns of this body and municipality, it;s at the end and says \"Κατά τη διαδικασία της ψηφοφορίας απουσίαζε η κ. Αναστασία Χαμηλοθώρη – Κουγιουμτζοπούλου.\" so that infomration might be per decision on this city, we will need to check more"
+    }
+   ]
+  },
+  "Ψ7ΠΥΩΞ1-ΘΩΧ": {
+   "city": "papagos-cholargos",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration stored as a vote",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored ['AGAINST', 'AGAINST', 'ABSTAIN']",
+     "verdict": "neither is right",
+     "correctValue": "what was extracted as against was abstain with the text \"«Λευκό» ψήφισαν οι Δημοτικοί Σύμβουλοι κ.κ. Μαρία Σιώτου και Αναστασία Χαμηλοθώρη -\nΚουγιουμτζοπούλου.\""
+    },
+    {
+     "priority": "P2",
+     "what": "attendance change dropped",
+     "detail": "page records one, extraction returned none",
+     "verdict": "neither is right",
+     "correctValue": "at the end of the page it says \"Κατά τη διαδικασία της ψηφοφορίας απουσίαζαν οι Δημοτικοί Σύμβουλοι κ.κ. Μαρία Αθανασάκου - Μουντάκη,\nΒασίλειος Σιαμάνης και Αντώνιος Ρεκλείτης.\""
+    }
+   ]
+  },
+  "9Χ6ΝΩ1Ν-7ΟΤ": {
+   "city": "sparta",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration dropped",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored nothing",
+     "verdict": "neither is right",
+     "correctValue": "it says κατα πλειοψηφια but because this particual docuemtn has a lto of excerpts from other documetns im ight be confusing"
+    },
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (dissenters_only)",
+     "verdict": "neither is right",
+     "correctValue": "it sayss towards the end \"Αρνητικά ψήφισε ο ..\" και \"Απείψαν οι δημοτικοί σύμβουλοι ..\""
+    },
+    {
+     "priority": "P1",
+     "what": "no decision text",
+     "detail": "extraction returned an empty excerpt",
+     "verdict": "survey is right",
+     "correctValue": null
+    },
+    {
+     "priority": "P2",
+     "what": "flagged truncated",
+     "detail": "extraction could not reach the decision",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΨΠΞΟΩ9Ρ-69Μ": {
+   "city": "vrilissia",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #2",
+     "verdict": "neither is right",
+     "correctValue": "it's the second out of agenda item"
+    }
+   ]
+  },
+  "6ΞΖ5Ω9Ρ-ΣΕ7": {
+   "city": "vrilissia",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration dropped",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored nothing",
+     "verdict": "neither is right",
+     "correctValue": "isntead of declaration it just says \"Αποφασίζει\nΜε δεκαέξι (16) θετικές ψήφους\""
+    },
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "neither is right",
+     "correctValue": "it lists them below sayingh \"Οι κάτωθι Δημοτικοί Σύμβουλοι έδωσαν θετική ψήφο\" and then \"Οι κάτωθι Δημοτικοί Σύμβουλοι δήλωσαν «παρών»:\""
+    },
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «Με δεκαέξι (16) θετικές ψήφους» stored «»",
+     "verdict": "neither is right",
+     "correctValue": "it lists them below sayingh \"Οι κάτωθι Δημοτικοί Σύμβουλοι έδωσαν θετική ψήφο\" and then \"Οι κάτωθι Δημοτικοί Σύμβουλοι δήλωσαν «παρών»:\""
+    },
+    {
+     "priority": "P1",
+     "what": "no decision text",
+     "detail": "extraction returned an empty excerpt",
+     "verdict": "survey is right",
+     "correctValue": null
+    },
+    {
+     "priority": "P2",
+     "what": "flagged truncated",
+     "detail": "extraction could not reach the decision",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΡΧ43ΩΡΦ-Θ5Ψ": {
+   "city": "zografou",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "declaration stored as a vote",
+     "detail": "page records ΠΑΡΩΝ/ΑΠΟΧΗ; stored ['ABSTAIN']",
+     "verdict": "survey is right",
+     "correctValue": "but it had an abstain, with which we still get to ομόφωνα"
+    },
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "neither is right",
+     "correctValue": "this was a meeting with a single item that's why the woridng is different \"Στην ημερήσια διάταξη υπήρχε και το μοναδικό θέμα, που αναφέρεται στην περίληψη της\nεπικεφαλίδας\""
+    }
+   ]
+  },
+  "ΨΦΑ6ΩΡΦ-2Ν0": {
+   "city": "zografou",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P1",
+     "what": "agenda item invented",
+     "detail": "page states none; extraction returned #1",
+     "verdict": "neither is right",
+     "correctValue": "it was a meeting with a single item that's why the woridng is differnt \"Στην ημερήσια διάταξη υπήρχε το μοναδικό θέμα που αναφέρεται στην περίληψη της\nεπικεφαλίδας.\""
+    }
+   ]
+  },
+  "9ΦΗΚΩΨ3-ΖΓΕ": {
+   "city": "argithea",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «ΑΠΟΦΑΣΙΖΕΙ ΟΜΟΦΩΝΑ» stored «Ομόφωνα»",
+     "verdict": "survey is right",
+     "correctValue": "but wat survey and extraction got is esentially the same, right?"
+    }
+   ]
+  },
+  "90Ν5ΩΨ3-Κ79": {
+   "city": "argithea",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "not resolvable from this page",
+     "correctValue": null
+    }
+   ]
+  },
+  "62ΩΡΩΨΔ-ΩΡ4": {
+   "city": "argos",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "not resolvable from this page",
+     "correctValue": null
+    }
+   ]
+  },
+  "9ΦΨΤΩ6Μ-17Ξ": {
+   "city": "athens",
+   "body": "1η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 7 vs extraction 15",
+     "verdict": "not resolvable from this page",
+     "correctValue": null
+    }
+   ]
+  },
+  "6ΣΟΔΩ6Μ-Φ3Χ": {
+   "city": "athens",
+   "body": "1η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 6 vs extraction 15",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "6ΥΙ2Ω6Μ-8ΓΞ": {
+   "city": "athens",
+   "body": "1η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 6 vs extraction 15",
+     "verdict": "not resolvable from this page",
+     "correctValue": null
+    }
+   ]
+  },
+  "65ΖΟΩ6Μ-ΗΒ9": {
+   "city": "athens",
+   "body": "1η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 7 vs extraction 15",
+     "verdict": "not resolvable from this page",
+     "correctValue": null
+    }
+   ]
+  },
+  "9Χ5ΘΩ6Μ-67Ν": {
+   "city": "athens",
+   "body": "4η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "9ΦΞ4Ω6Μ-ΑΔ5": {
+   "city": "athens",
+   "body": "4η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "neither is right",
+     "correctValue": "Α Π Ο Φ Α Σ Ι Ζ Ε Ι  Ο Μ Ο Φ Ω Ν Α"
+    }
+   ]
+  },
+  "Ψ14ΒΩ6Μ-Χ70": {
+   "city": "athens",
+   "body": "4η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "neither is right",
+     "correctValue": "survey got the beginning correct but it meissed the name,s the full extract is \"YΠΕΡ ψήφισαν η Πρόεδρος κα Βαρδή Π. και οι κ.κ. Σύμβουλοι: Αρβανίτη Ε., Γιαννοπούλου Γ., Καρύδας Δ.-\nΕ., Κελεπούρη Α., Κολλιόπουλος Δ., Μητροπούλου-Κατσίκη Γ., Πανόπουλος Α., Φραγκιουδάκη-\nΚωνσταντάκη Κ., Ψημμένου Γ.\""
+    }
+   ]
+  },
+  "9ΥΣΜΩ6Μ-49Ζ": {
+   "city": "athens",
+   "body": "5η Κοινότητα",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «Εγκρίνεται με ΥΠΕΡ: 10 ψήφους» stored «ΟΜΟΦΩΝΑ»",
+     "verdict": "neither is right",
+     "correctValue": "both are kidn of right, cause it's ΟΜΟΦΩΝΑ because one person aid abstain , full text is \"Εγκρίνεται με ΥΠΕΡ: 10 ψήφους\" and then \"Αποχή δήλωσε η κ. ΒΛΑΧΟΥ ΑΝΝΑ\""
+    }
+   ]
+  },
+  "6ΣΚΚΩ6Μ-ΔΛ3": {
+   "city": "athens",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 5 vs extraction 7",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΡΚΠΠΩ6Μ-ΕΦΧ": {
+   "city": "athens",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 5 vs extraction 7",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "ΡΦΗ0ΩΗΔ-ΒΥΥ": {
+   "city": "chalandri",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "named voters dropped",
+     "detail": "page names voters (all)",
+     "verdict": "neither is right",
+     "correctValue": "at the end of the page it says \"Οι κ.κ. Κ.-Ο. Καραγιάννη, Ε. Χριστούλη, Κ. Γερολυμάτος, Ι. Λαδόπουλος, Ι. Αθανασάτου, Γ.\nΛυμπεράτος, Χ. Μαχαίρα, Δ. Γκασούκα, Α. Μαυραγάνης, Ε. Λέρτα, Χ. Αλούπη, Ε. Κουράσης, Ε.\nΠαντελιδάκης, Δ. Βασιλόπουλος, Κ. Ευθυμίου, Σ. Φωτεινός, Ι. Καμπούρη, Α. Σούσου και Ε.\nΚρανίδης ψήφισαν υπέρ του πίνακα στοχοθεσίας οικονομικών αποτελεσμάτων του Δήμου\nΈτους 2026.\" and \"Οι κ.κ. Χ. Αγαπητού, Κ. Αγγελής, Π. Λαμπρόπουλος, Χ. Κιάκος, Θ. Αλεξανδρή, Π. Ζορμπά, Ε.\nΚάλλη, Κ. Καρατζά και Ι. Παπαγεωργίου δεν ψήφισαν υπέρ του πίνακα στοχοθεσίας\nοικονομικών αποτελεσμάτων του Δήμου Έτους 2026.\""
+    }
+   ]
+  },
+  "Ψ1ΦΞΩΗ5-ΧΧΓ": {
+   "city": "chania",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "attendance change dropped",
+     "detail": "page records one, extraction returned none",
+     "verdict": "extraction is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "Ψ7Θ8ΩΞΒ-Ξ3Β": {
+   "city": "orestiada",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "attendance change dropped",
+     "detail": "page records one, extraction returned none",
+     "verdict": "neither is right",
+     "correctValue": "at the end of the document it has a line that says \"Κατά την διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι\nΑρχοντίδης και Σταματίου.\" whch is a hint that for this particual body and city the attendance changes might go per decision at the end"
+    }
+   ]
+  },
+  "9ΕΕ4ΩΞΒ-8ΥΝ": {
+   "city": "orestiada",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "attendance change dropped",
+     "detail": "page records one, extraction returned none",
+     "verdict": "neither is right",
+     "correctValue": "same as another orestida docuemnt, it seems that the attenacne change is per decision (per subject) and is at the end of the document stated as \"Κατά την διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι\nΔημήτριος Τσελεμπής, Μιχαήλ Στράντζελης, Ηλίας Αγγελακούδης, Πέτρος Αργυριάδης και Σταυρίδης\nΑπόστολος.\""
+    }
+   ]
+  },
+  "6ΝΕΓΩΞ1-ΗΛΖ": {
+   "city": "papagos-cholargos",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "attendance change dropped",
+     "detail": "page records one, extraction returned none",
+     "verdict": "neither is right",
+     "correctValue": "it seems that for this body and city the attenance change is at the end of the documetn stated as \"Κατά τη διαδικασία της ψηφοφορίας απουσίαζε ο Δημοτικός Σύμβουλος κος Γεώργιος Ρεμούνδος.\""
+    }
+   ]
+  },
+  "Ρ0ΒΛΩ1Λ-ΑΛ4": {
+   "city": "samothraki",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «με την απόλυτη πλειοψηφία των τριών (3) » stored «Ομόφωνα»",
+     "verdict": "extraction is right",
+     "correctValue": "survey is also write, it just got the first part, cause 3 where all the members present so it's ομοφωνα"
+    }
+   ]
+  },
+  "ΨΚ0ΖΩ1Ν-8Η0": {
+   "city": "sparta",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «Κατά Πλειοψηφία» stored «Κατά Πλειοψηφία»",
+     "verdict": "extraction is right",
+     "correctValue": "importatn here is to also get the actrual votes of the people"
+    }
+   ]
+  },
+  "9Ο6ΒΩ9Ρ-Τ5Β": {
+   "city": "vrilissia",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «Ψήφισαν: 26» stored «Κατά πλειοψηφία»",
+     "verdict": "not resolvable from this page",
+     "correctValue": null
+    }
+   ]
+  },
+  "6ΜΕ6ΩΡΦ-ΝΘ4": {
+   "city": "zografou",
+   "body": "Επιτροπή",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "present count disagrees",
+     "detail": "page 6 vs extraction 12",
+     "verdict": "survey is right",
+     "correctValue": null
+    }
+   ]
+  },
+  "9Δ3ΒΩΡΦ-ΞΘΘ": {
+   "city": "zografou",
+   "body": "Συμβούλιο",
+   "issues": [
+    {
+     "priority": "P2",
+     "what": "vote tally dropped",
+     "detail": "page «εξελέγη ομόφωνα» stored «Ομόφωνα»",
+     "verdict": "not resolvable from this page",
+     "correctValue": "ignore this documetn"
+    }
+   ]
+  }
+ }
+}

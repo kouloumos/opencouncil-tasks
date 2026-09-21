@@ -1,0 +1,757 @@
+{
+ "Ψ3ΣΥΩ6Μ-ΘΔ3": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": null
+   },
+   "note": "page prints no item number; null is the answer"
+  }
+ },
+ "Ρ7Κ4Ω6Μ-ΚΨΘ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": null
+   },
+   "note": "page prints no item number; null is the answer"
+  }
+ },
+ "Ψ5ΜΟΩΗ5-Ν03": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": null
+   },
+   "note": "page prints no item number; null is the answer"
+  }
+ },
+ "Ψ6Λ7ΩΗ5-1Υ0": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": null
+   },
+   "note": "page prints no item number; null is the answer"
+  }
+ },
+ "9ΝΡΔΩΞΒ-ΨΟΛ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": null
+   },
+   "note": "page prints no item number; null is the answer"
+  }
+ },
+ "9ΨΨ9ΩΞ1-ΙΧΦ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": null
+   },
+   "note": "page prints no item number; null is the answer"
+  }
+ },
+ "ΨΒΑΔΩ6Μ-ΚΡΙ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 3
+   },
+   "note": "reviewer: extraction is right"
+  }
+ },
+ "97ΜΗΩ6Μ-ΠΑΦ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 1,
+    "isOutOfAgenda": true
+   },
+   "note": "page says first out-of-agenda item; the survey missed the OA ordinal, extraction had it"
+  }
+ },
+ "ΨΗ9ΕΩ6Μ-ΠΟ3": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 2,
+    "isOutOfAgenda": true
+   },
+   "note": "«Εισάγεται το 2ο Θέμα Ε.Η.Δ.»; extraction had OA2, the survey missed it"
+  },
+  "votes": {
+   "set": {
+    "namedVoters": "all",
+    "asExtracted": [
+     {
+      "name": "Παναγιώτα (Τέτα) Δρούλια",
+      "vote": "FOR"
+     },
+     {
+      "name": "Αγγελιδάκης Παναγιώτης",
+      "vote": "FOR"
+     },
+     {
+      "name": "Δήμου Δημήτριος",
+      "vote": "FOR"
+     },
+     {
+      "name": "Ζαφείρης Ιωάννης",
+      "vote": "FOR"
+     },
+     {
+      "name": "Καβέτσου Κωνσταντίνα (Ντάνα)",
+      "vote": "FOR"
+     },
+     {
+      "name": "Χαλικιά Ειρήνη Αγλαϊα",
+      "vote": "FOR"
+     }
+    ]
+   },
+   "note": "«Ψήφισαν: ΥΠΕΡ: …» names all six; extraction stored none"
+  }
+ },
+ "ΨΤΠ4ΩΗΔ-ΣΨΓ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 1,
+    "isOutOfAgenda": true
+   },
+   "note": "first out-of-agenda item"
+  }
+ },
+ "6ΘΘΘΩΞ1-ΨΣΖ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 1,
+    "isOutOfAgenda": true
+   },
+   "note": "out-of-agenda; extraction OA1 matches the page"
+  },
+  "attendanceChanges": {
+   "set": {
+    "stated": false,
+    "asExtracted": []
+   },
+   "note": "not an arrival or departure: a per-vote absence printed after the decision"
+  },
+  "perVoteAbsence": {
+   "members": [
+    "Αναστασία Χαμηλοθώρη – Κουγιουμτζοπούλου"
+   ],
+   "asPrinted": "Κατά τη διαδικασία της ψηφοφορίας απουσίαζε η κ. Αναστασία Χαμηλοθώρη – Κουγιουμτζοπούλου."
+  }
+ },
+ "ΨΠΞΟΩ9Ρ-69Μ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 2,
+    "isOutOfAgenda": true
+   },
+   "note": "second out-of-agenda item"
+  }
+ },
+ "Ψ75ΤΩ6Μ-6ΔΡ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 1,
+    "isOutOfAgenda": false
+   },
+   "note": "single-item session («το μοναδικό θέμα»): #1 by the rule the reviewer applied on Ψ75ΤΩ6Μ-6ΔΡ"
+  }
+ },
+ "ΡΧ43ΩΡΦ-Θ5Ψ": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 1,
+    "isOutOfAgenda": false
+   },
+   "note": "single-item session («το μοναδικό θέμα»): #1 by the rule the reviewer applied on Ψ75ΤΩ6Μ-6ΔΡ"
+  },
+  "votes": {
+   "set": {
+    "declarationsRecorded": false
+   },
+   "note": "«ΛΕΥΚΟ» ψήφισε ΚΑΡΑΒΙΔΑΣ is a blank vote; extraction's ABSTAIN is right, the survey called it a declaration"
+  }
+ },
+ "ΨΦΑ6ΩΡΦ-2Ν0": {
+  "subject": {
+   "set": {
+    "agendaItemNumber": 1,
+    "isOutOfAgenda": false
+   },
+   "note": "single-item session («το μοναδικό θέμα»): #1 by the rule the reviewer applied on Ψ75ΤΩ6Μ-6ΔΡ"
+  }
+ },
+ "6ΝΕ1ΩΞΒ-Υ0Σ": {
+  "remove": "reviewer: older document, ignore"
+ },
+ "9Δ3ΒΩΡΦ-ΞΘΘ": {
+  "remove": "reviewer: ignore this document"
+ },
+ "6ΝΛΕΩ6Μ-ΛΣΤ": {
+  "votes": {
+   "set": {
+    "declarationsRecorded": false
+   },
+   "note": "reviewer: what the page prints are votes, not declarations"
+  }
+ },
+ "9Ω5ΟΩ6Μ-ΚΟΥ": {
+  "votes": {
+   "set": {
+    "declarationsRecorded": false
+   },
+   "note": "reviewer: what the page prints are votes, not declarations"
+  }
+ },
+ "ΨΙΤ4ΩΞ1-7ΑΚ": {
+  "votes": {
+   "set": {
+    "declarationsRecorded": false
+   },
+   "note": "reviewer: what the page prints are votes, not declarations"
+  }
+ },
+ "Ψ9ΒΦΩ6Μ-ΟΘΥ": {
+  "votes": {
+   "set": {
+    "declarationsRecorded": false,
+    "carriesTally": false
+   },
+   "note": "«επί συνόλου παρευρισκόμενων 30» is an attendance count, not a tally"
+  }
+ },
+ "9ΦΗΚΩΨ3-ΖΓΕ": {
+  "votes": {
+   "set": {
+    "carriesTally": false
+   },
+   "note": "«ΑΠΟΦΑΣΙΖΕΙ ΟΜΟΦΩΝΑ» carries no tally; survey flag was wrong"
+  }
+ },
+ "Ρ0ΒΛΩ1Λ-ΑΛ4": {
+  "votes": {
+   "set": {
+    "carriesTally": false
+   },
+   "note": "«των τριών (3) μελών» counts those present, all voted for; ομόφωνα is right"
+  }
+ },
+ "ΨΚ0ΖΩ1Ν-8Η0": {
+  "votes": {
+   "set": {
+    "carriesTally": false
+   },
+   "note": "«Κατά Πλειοψηφία» carries no tally; the named votes were extracted"
+  }
+ },
+ "9ΦΞ4Ω6Μ-ΑΔ5": {
+  "votes": {
+   "set": {
+    "namedVoters": "none"
+   },
+   "note": "page only says ΑΠΟΦΑΣΙΖΕΙ ΟΜΟΦΩΝΑ; nobody is named"
+  }
+ },
+ "9Χ5ΘΩ6Μ-67Ν": {
+  "votes": {
+   "set": {
+    "namedVoters": "all",
+    "asExtracted": [
+     {
+      "name": "Βαρδή Πολυξένη",
+      "vote": "FOR"
+     },
+     {
+      "name": "Αρβανίτη Ευανθία",
+      "vote": "FOR"
+     },
+     {
+      "name": "Καρύδας Δημήτριος-Ευάγγελος",
+      "vote": "FOR"
+     },
+     {
+      "name": "Κελεπούρη Αναστασία (Νατάσα)",
+      "vote": "FOR"
+     },
+     {
+      "name": "Κολλιόπουλος Διονύσιος",
+      "vote": "FOR"
+     },
+     {
+      "name": "Λόκα Μαρία",
+      "vote": "FOR"
+     },
+     {
+      "name": "Μητροπούλου-Κατσίκη Γερασιμούλα (Μίνα)",
+      "vote": "FOR"
+     },
+     {
+      "name": "Μοναστηριώτης Αναστάσιος (Τάσος)",
+      "vote": "FOR"
+     },
+     {
+      "name": "Ψημμένου Γιαννούλα (Γιάννα)",
+      "vote": "FOR"
+     }
+    ]
+   },
+   "note": "«ΥΠΕΡ ψήφισαν η Πρόεδρος … και οι κ.κ. Σύμβουλοι …»; ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ ΩΣ ΠΡΟΣ ΤΗΝ ΨΗΦΟΦΟΡΙΑ"
+  }
+ },
+ "Ψ14ΒΩ6Μ-Χ70": {
+  "votes": {
+   "set": {
+    "namedVoters": "all",
+    "asExtracted": [
+     {
+      "name": "Βαρδή Π.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Αρβανίτη Ε.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Γιαννοπούλου Γ.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Καρύδας Δ.-Ε.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Κελεπούρη Α.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Κολλιόπουλος Δ.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Μητροπούλου-Κατσίκη Γ.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Πανόπουλος Α.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Φραγκιουδάκη-Κωνσταντάκη Κ.",
+      "vote": "FOR"
+     },
+     {
+      "name": "Ψημμένου Γ.",
+      "vote": "FOR"
+     }
+    ]
+   },
+   "note": "names as printed, initials only"
+  }
+ },
+ "9ΥΣΜΩ6Μ-49Ζ": {
+  "votes": {
+   "set": {
+    "phraseAsPrinted": "Εγκρίνεται με ΥΠΕΡ: 10 ψήφους",
+    "carriesTally": true,
+    "declarationsRecorded": true,
+    "asExtracted": [
+     {
+      "name": "ΒΛΑΧΟΥ ΑΝΝΑ",
+      "vote": "DID_NOT_VOTE"
+     }
+    ]
+   },
+   "note": "«Αποχή δήλωσε η κ. ΒΛΑΧΟΥ ΑΝΝΑ» was extracted; the tally 10 was not"
+  }
+ },
+ "9Χ6ΝΩ1Ν-7ΟΤ": {
+  "votes": {
+   "set": {
+    "namedVoters": "dissenters_only",
+    "declarationsRecorded": true,
+    "asExtracted": [
+     {
+      "name": "Βαλιώτης Ευάγγελος",
+      "vote": "AGAINST"
+     },
+     {
+      "name": "Δεδεδήμου Γεωργία",
+      "vote": "DID_NOT_VOTE"
+     },
+     {
+      "name": "Καρμοίρης Ιωάννης",
+      "vote": "DID_NOT_VOTE"
+     }
+    ]
+   },
+   "note": "p.34: «Αρνητικά ψήφισε ο δημοτικός σύμβουλος Βαλιώτης Ευάγγελος. Απείχαν οι δημοτικοί σύμβουλοι Δεδεδήμου Γεωργία, Καρμοίρης Ιωάννης»; 35-page document, extraction never reached it"
+  },
+  "excerpt": {
+   "set": {},
+   "note": "the decision text is on the page; the document is long and extraction returned nothing"
+  }
+ },
+ "6ΞΖ5Ω9Ρ-ΣΕ7": {
+  "votes": {
+   "set": {
+    "phraseAsPrinted": "Με δεκαέξι (16) θετικές ψήφους",
+    "carriesTally": true,
+    "namedVoters": "all",
+    "declarationsRecorded": true,
+    "asExtracted": [
+     {
+      "name": "ΧΡΗΣΤΑΚΗΣ ΑΝΑΣΤΑΣΙΟΣ (ΤΑΣΟΣ)",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΤΖΙΜΑ ΛΑΜΠΡΙΝΗ ΛΙΛΗ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΓΟΥΝΑΡΗΣ ΧΡΗΣΤΟΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΔΗΜΗΤΡΙΟΥ ΑΝΑΣΤΑΣΙΟΣ (ΤΑΣΟΣ)",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΣΤΑΜΑΤΕΛΟΠΟΥΛΟΣ ΝΙΚΗΤΑΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΜΠΗΤΑΣ ΙΩΑΝΝΗΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΑΣΗΜΑΚΟΠΟΥΛΟΣ ΑΔΑΜ (ΔΑΝΗΣ)",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΒΟΥΤΣΑΔΑΚΗ ΑΙΚΑΤΕΡΙΝΗ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΜΑΝΤΙΝΙΔΟΥ-ΤΣΟΥΒΑΛΟΥ ΣΟΦΙΑ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΚΑΛΟΓΕΡΑΚΗ ΕΥΑΓΓΕΛΙΑ (ΛΙΛΗ)",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΣΑΚΕΛΛΑΡΙΑΔΗΣ ΜΑΡΙΝΟΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΜΑΡΙΝΗΣ ΓΕΩΡΓΙΟΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΚΑΠΠΑΣ ΧΡΗΣΤΟΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΑΝΑΓΝΩΣΤΟΥ ΠΑΝΑΓΙΩΤΗΣ (ΠΑΝΟΣ)",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΦΑΡΑΚΛΑΣ ΚΩΝΣΤΑΝΤΙΝΟΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΚΟΥΤΣΙΩΡΗΣ ΒΑΣΙΛΕΙΟΣ",
+      "vote": "FOR"
+     },
+     {
+      "name": "ΒΑΦΕΙΑΔΗΣ ΚΩΝΣΤΑΝΤΙΝΟΣ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΧΑΝΤΖΑΡΑ ΣΟΦΙΑ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΜΑΛΑΚΟΥ ΧΡΙΣΤΙΝΑ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΚΥΡΙΤΣΗ ΙΩΑΝΝΑ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΑΡΣΕΝΗ – ΛΑΜΠΡΟΥ ΠΑΡΑΣΚΕΥΗ (ΒΟΥΛΑ)",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΡΑΠΤΗ ΣΟΦΙΑ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΛΙΑΚΟΠΟΥΛΟΣ ΚΩΝΣΤΑΝΤΙΝΟΣ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΤΣΟΥΤΣΙΑΣ ΙΩΑΝΝΗΣ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΠΑΠΑΧΡΙΣΤΟΔΟΥΛΟΥ ΜΑΡΙΝΑ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΣΠΗΛΙΩΤΗΣ ΑΘΑΝΑΣΙΟΣ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΑΡΧΙΜΑΝΔΡΙΤΗΣ ΒΑΣΙΛΕΙΟΣ",
+      "vote": "PRESENT"
+     },
+     {
+      "name": "ΒΗΤΤΟΣ ΒΑΣΙΛΕΙΟΣ",
+      "vote": "PRESENT"
+     }
+    ]
+   },
+   "note": "p.16: 16 «έδωσαν θετική ψήφο» and 12 «δήλωσαν παρών», all named; 17-page document, extraction never reached it"
+  },
+  "excerpt": {
+   "set": {},
+   "note": "the decision text is on the page; the document is long and extraction returned nothing"
+  }
+ },
+ "Ψ7ΠΥΩΞ1-ΘΩΧ": {
+  "votes": {
+   "set": {
+    "perLineVote": true,
+    "declarationsRecorded": false
+   },
+   "note": "two-part vote. Part A (Παπάγου) ΚΑΤΑ ΠΛΕΙΟΨΗΦΙΑ: «Μειοψήφησαν» Σιώτου and Χαμηλοθώρη-Κουγιουμτζοπούλου, «Λευκό» Καρανικόλας — which is exactly what was extracted. Part B (Χολαργού) ΟΜΟΦΩΝΑ with «Λευκό» Σιώτου and Χαμηλοθώρη. The reviewer's verdict looked at part B; the stored values match part A. One position per decision cannot hold both"
+  },
+  "attendanceChanges": {
+   "set": {
+    "stated": false,
+    "asExtracted": []
+   },
+   "note": "not an arrival or departure: a per-vote absence printed after the decision"
+  },
+  "perVoteAbsence": {
+   "members": [
+    "Μαρία Αθανασάκου - Μουντάκη",
+    "Βασίλειος Σιαμάνης",
+    "Αντώνιος Ρεκλείτης"
+   ],
+   "asPrinted": "Κατά τη διαδικασία της ψηφοφορίας απουσίαζαν οι Δημοτικοί Σύμβουλοι κ.κ. Μαρία Αθανασάκου - Μουντάκη, Βασίλειος Σιαμάνης και Αντώνιος Ρεκλείτης."
+  }
+ },
+ "ΡΘΙΖΩ6Μ-ΨΨ0": {
+  "votes": {
+   "set": {},
+   "note": "phrase «ΑΠΟΦΑΣΙΖΕΙ ΟΜΟΦΩΝΑ» is printed; 18-page document, extraction returned null"
+  },
+  "excerpt": {
+   "set": {},
+   "note": "the decision text is on the page; the document is long and extraction returned nothing"
+  }
+ },
+ "ΡΦΗ0ΩΗΔ-ΒΥΥ": {
+  "votes": {
+   "unresolvable": "page names 19 who «ψήφισαν υπέρ» and 9 who «δεν ψήφισαν υπέρ»; the second group is neither ΚΑΤΑ nor ΛΕΥΚΟ and no vote value exists for it. Needs a storage decision, not a reading"
+  }
+ },
+ "90Ν5ΩΨ3-Κ79": {
+  "votes": {
+   "unresolvable": "reviewer: not resolvable from this page"
+  }
+ },
+ "62ΩΡΩΨΔ-ΩΡ4": {
+  "votes": {
+   "unresolvable": "reviewer: not resolvable from this page"
+  }
+ },
+ "9Ο6ΒΩ9Ρ-Τ5Β": {
+  "votes": {
+   "unresolvable": "reviewer: not resolvable from this page"
+  }
+ },
+ "9ΦΨΤΩ6Μ-17Ξ": {
+  "rollCall": {
+   "set": {
+    "presentMembers": [
+     "Ευαγγελία Λίλιαν Γαζή",
+     "Κωνσταντίνος Δεκαβάλλας",
+     "Μαρία Καζάντη",
+     "Παναγιώτης Κουφάκης",
+     "Γεώργιος (Γιωργής) Νέτος",
+     "Παναγιώτης Ξυνέλης",
+     "Παπαγεωργίου Χρυσούλα"
+    ],
+    "absentMembers": [
+     "Σπύρος (Σάκης) Αθανασάκης",
+     "Αικατερίνη Βαλσαμάκη",
+     "Λυδία Βέρα",
+     "Σοφία Γαϊτάνη",
+     "Γεώργιος Διαμάντης",
+     "Δημήτριος Ευθυμίου",
+     "Γεωργία Σμέρου",
+     "Χαμντί Ντάφερ"
+    ]
+   },
+   "note": "15-member composition (president + 14); absentees printed by surname and initial (e.g. «Αθανασάκης Σ.»), which the extractor failed to subtract from the composition and so returned all 15 as present; Δεκαβάλλας and Νέτος departed at decision 230, after this one (227)"
+  }
+ },
+ "6ΣΟΔΩ6Μ-Φ3Χ": {
+  "rollCall": {
+   "set": {
+    "presentMembers": [
+     "Ευαγγελία Λίλιαν Γαζή",
+     "Λυδία Βέρα",
+     "Σοφία Γαϊτάνη",
+     "Κωνσταντίνος Δεκαβάλλας",
+     "Μαρία Καζάντη",
+     "Παναγιώτης Κουφάκης",
+     "Παπαγεωργίου Χρυσούλα"
+    ],
+    "absentMembers": [
+     "Σπύρος (Σάκης) Αθανασάκης",
+     "Αικατερίνη Βαλσαμάκη",
+     "Γεώργιος Διαμάντης",
+     "Δημήτριος Ευθυμίου",
+     "Γεώργιος (Γιωργής) Νέτος",
+     "Παναγιώτης Ξυνέλης",
+     "Γεωργία Σμέρου",
+     "Χαμντί Ντάφερ"
+    ]
+   },
+   "note": "15-member composition (president + 14); absentees printed by surname and initial (e.g. «Αθανασάκης Σ.»), which the extractor failed to subtract from the composition and so returned all 15 as present; Βέρα departed at decision 5, after this one (1)"
+  }
+ },
+ "6ΥΙ2Ω6Μ-8ΓΞ": {
+  "rollCall": {
+   "set": {
+    "presentMembers": [
+     "Ευαγγελία Λίλιαν Γαζή",
+     "Αικατερίνη Βαλσαμάκη",
+     "Λυδία Βέρα",
+     "Σοφία Γαϊτάνη",
+     "Κωνσταντίνος Δεκαβάλλας",
+     "Δημήτριος Ευθυμίου",
+     "Παναγιώτης Κουφάκης",
+     "Γεώργιος (Γιωργής) Νέτος",
+     "Παναγιώτης Ξυνέλης",
+     "Παπαγεωργίου Χρυσούλα",
+     "Χαμντί Ντάφερ"
+    ],
+    "absentMembers": [
+     "Σπύρος (Σάκης) Αθανασάκης",
+     "Γεώργιος Διαμάντης",
+     "Μαρία Καζάντη",
+     "Γεωργία Σμέρου"
+    ]
+   },
+   "note": "15-member composition (president + 14); absentees printed by surname and initial (e.g. «Αθανασάκης Σ.»), which the extractor failed to subtract from the composition and so returned all 15 as present; Βέρα, Νέτος, Ξυνέλης, Χαμντί departed at decision 286, before this one (304): the vote names exactly the 7 who remained"
+  }
+ },
+ "65ΖΟΩ6Μ-ΗΒ9": {
+  "rollCall": {
+   "set": {
+    "presentMembers": [
+     "Ευαγγελία Λίλιαν Γαζή",
+     "Αικατερίνη Βαλσαμάκη",
+     "Λυδία Βέρα",
+     "Σοφία Γαϊτάνη",
+     "Κωνσταντίνος Δεκαβάλλας",
+     "Δημήτριος Ευθυμίου",
+     "Παναγιώτης Κουφάκης",
+     "Γεώργιος (Γιωργής) Νέτος",
+     "Παναγιώτης Ξυνέλης",
+     "Παπαγεωργίου Χρυσούλα",
+     "Χαμντί Ντάφερ"
+    ],
+    "absentMembers": [
+     "Σπύρος (Σάκης) Αθανασάκης",
+     "Γεώργιος Διαμάντης",
+     "Μαρία Καζάντη",
+     "Γεωργία Σμέρου"
+    ]
+   },
+   "note": "15-member composition (president + 14); absentees printed by surname and initial (e.g. «Αθανασάκης Σ.»), which the extractor failed to subtract from the composition and so returned all 15 as present; same session as 6ΥΙ2Ω6Μ-8ΓΞ, this decision (284) precedes the departures at 286"
+  }
+ },
+ "6ΜΕ6ΩΡΦ-ΝΘ4": {
+  "rollCall": {
+   "set": {
+    "presentMembers": [
+     "ΜΕΤΙΚΑΡΙΔΗΣ ΘΕΟΔΩΡΟΣ",
+     "ΓΡΙΒΑΣ ΓΕΩΡΓΙΟΣ",
+     "ΚΙΚΗ ΗΛΕΚΤΡΑ",
+     "ΣΤΑΜΑΤΑΚΗΣ ΖΑΧΑΡΙΑΣ (ΧΑΡΗΣ)",
+     "ΠΟΛΙΤΗΣ ΘΩΜΑΣ",
+     "ΚΑΡΑΒΙΔΑΣ ΑΝΔΡΕΑΣ"
+    ],
+    "absentMembers": [
+     "ΤΙΝΑ ΚΑΦΑΤΣΑΚΗ",
+     "ΓΚΡΕΚΑΣ ΠΑΝΑΓΙΩΤΗΣ",
+     "ΓΙΟΥΡΓΑΣ ΣΤΕΦΑΝΟΣ",
+     "ΧΑΛΚΙΑΔΑΚΗ ΕΙΡΗΝΗ (ΡΕΝΑ)"
+    ]
+   },
+   "note": "«Παρόντες κατά την έναρξη … [ΣΥΝΟΛΟ ΕΞΙ (6) ΜΕΛΗ]»; ΠΟΛΙΤΗΣ substitutes for ΓΚΡΕΚΑΣ. The extractor took ΤΑΚΤΙΚΑ + ΑΝΑΠΛΗΡΩΜΑΤΙΚΑ as the composition and returned 12"
+  }
+ },
+ "Ψ1ΦΞΩΗ5-ΧΧΓ": {
+  "attendanceChanges": {
+   "set": {
+    "stated": false
+   },
+   "note": "reviewer: extraction is right, no change on the page"
+  }
+ },
+ "6ΝΕΓΩΞ1-ΗΛΖ": {
+  "attendanceChanges": {
+   "set": {
+    "stated": false,
+    "asExtracted": []
+   },
+   "note": "not an arrival or departure: a per-vote absence printed after the decision"
+  },
+  "perVoteAbsence": {
+   "members": [
+    "Γεώργιος Ρεμούνδος"
+   ],
+   "asPrinted": "Κατά τη διαδικασία της ψηφοφορίας απουσίαζε ο Δημοτικός Σύμβουλος κος Γεώργιος Ρεμούνδος."
+  }
+ },
+ "Ψ7Θ8ΩΞΒ-Ξ3Β": {
+  "attendanceChanges": {
+   "set": {
+    "stated": false,
+    "asExtracted": []
+   },
+   "note": "not an arrival or departure: a per-vote absence printed after the decision"
+  },
+  "perVoteAbsence": {
+   "members": [
+    "Αρχοντίδης",
+    "Σταματίου"
+   ],
+   "asPrinted": "Κατά την διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι Αρχοντίδης και Σταματίου."
+  }
+ },
+ "9ΕΕ4ΩΞΒ-8ΥΝ": {
+  "attendanceChanges": {
+   "set": {
+    "stated": false,
+    "asExtracted": []
+   },
+   "note": "not an arrival or departure: a per-vote absence printed after the decision"
+  },
+  "perVoteAbsence": {
+   "members": [
+    "Δημήτριος Τσελεμπής",
+    "Μιχαήλ Στράντζελης",
+    "Ηλίας Αγγελακούδης",
+    "Πέτρος Αργυριάδης",
+    "Σταυρίδης Απόστολος"
+   ],
+   "asPrinted": "Κατά την διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι Δημήτριος Τσελεμπής, Μιχαήλ Στράντζελης, Ηλίας Αγγελακούδης, Πέτρος Αργυριάδης και Σταυρίδης Απόστολος."
+  }
+ }
+}
