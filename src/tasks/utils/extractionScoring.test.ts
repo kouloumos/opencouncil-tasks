@@ -1,0 +1,180 @@
+import { describe, it, expect } from 'vitest';
+import {
+    scoreRollCall, scoreAttendanceChanges, scorePerVoteAbsence, scoreVotes, scoreSubject, scoreExcerpt, scoreMayor, tallyScores, scoreDocument,
+    type ExtractionLabel,
+} from './extractionScoring.js';
+import type { RawExtractedDecision } from './decisionPdfExtraction.js';
+
+const extraction = (over: Partial<RawExtractedDecision> = {}): RawExtractedDecision => ({
+    presentMembers: [], absentMembers: [], mayorPresent: null, decisionExcerpt: '', decisionNumber: null,
+    references: '', voteResult: null, voteDetails: [], attendanceChanges: [], discussionOrder: null,
+    subjectInfo: null, incomplete: false, attendanceFormat: 'explicit_present_absent', compositionMembers: null, presidedBy: null, decisionAttendance: null,
+    voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null }, ...over,
+});
+
+describe('scoreRollCall', () => {
+    it('matches names through tonos and nickname differences, the way the pipeline does', () => {
+        const label: ExtractionLabel['rollCall'] = {
+            presentMembers: ['ΠΑΠΑΔΟΠΟΥΛΟΣ ΓΕΩΡΓΙΟΣ (ΓΙΩΡΓΟΣ)'], absentMembers: ['Κορλού Όλγα'], verified: 'agreed',
+        };
+        const got = extraction({ presentMembers: ['Παπαδόπουλος Γεώργιος'], absentMembers: ['ΚΟΡΛΟΥ ΟΛΓΑ'] });
+        expect(scoreRollCall(label, got).outcome).toBe('agree');
+    });
+
+    it('names who was lost and who was invented', () => {
+        const label: ExtractionLabel['rollCall'] = { presentMembers: ['Α Β', 'Γ Δ'], absentMembers: [], verified: true };
+        const s = scoreRollCall(label, extraction({ presentMembers: ['Α Β', 'Ε Ζ'] }));
+        expect(s.outcome).toBe('disagree');
+        expect(s.detail).toContain('lost: γ δ');
+        expect(s.detail).toContain('extra: ε ζ');
+    });
+
+    it('does not count a contested label for either side', () => {
+        const label: ExtractionLabel['rollCall'] = { presentMembers: ['Α Β'], absentMembers: [], verified: false };
+        expect(scoreRollCall(label, extraction()).outcome).toBe('contested');
+    });
+});
+
+describe('scoreAttendanceChanges', () => {
+    const departure = { name: 'Κορλού Όλγα', type: 'departure' as const, agendaItem: { agendaItemIndex: 5, nonAgendaReason: null }, timing: 'after' as const };
+    it('treats the anchor as part of the fact', () => {
+        const label: ExtractionLabel['attendanceChanges'] = { stated: true, asExtracted: [departure], verified: 'agreed' };
+        const during = extraction({ attendanceChanges: [{ ...departure, timing: 'during', rawText: '' }] });
+        expect(scoreAttendanceChanges(label, during).outcome).toBe('disagree');
+    });
+    it('reports a stated change the extractor returned nothing for as missing', () => {
+        const label: ExtractionLabel['attendanceChanges'] = { stated: true, asExtracted: [departure], verified: 'agreed' };
+        expect(scoreAttendanceChanges(label, extraction()).outcome).toBe('missing');
+    });
+});
+
+describe('anchors and per-vote absence', () => {
+    it('a change the page pins to a decision number must come back so pinned', () => {
+        const label: ExtractionLabel['attendanceChanges'] = {
+            stated: true, anchoredBy: 'decision_number',
+            asExtracted: [{ name: 'Λυδία Βέρα', type: 'departure', agendaItem: null, timing: null }], verified: true,
+        };
+        const asItem = extraction({ attendanceChanges: [{ name: 'Λυδία Βέρα', type: 'departure', agendaItem: null, timing: null, rawText: '' }] });
+        expect(scoreAttendanceChanges(label, asItem).detail).toContain('anchor: page decision_number');
+        const pinned = extraction({ attendanceChanges: [{ name: 'Λυδία Βέρα', type: 'departure', agendaItem: null, timing: null, rawText: '',
+            anchor: { kind: 'decision_number', agendaItem: null, decisionNumber: '286', phase: null, timing: 'during' } }] });
+        expect(scoreAttendanceChanges(label, pinned).outcome).toBe('agree');
+    });
+    it('per-vote absence is scored on its own and ignored by the session changes', () => {
+        const label: ExtractionLabel['perVoteAbsence'] = { members: ['Γεώργιος Ρεμούνδος'], verified: true };
+        const got = extraction({ attendanceChanges: [{ name: 'Γεώργιος Ρεμούνδος', type: 'absent_for_vote', agendaItem: null, timing: null, rawText: '' }] });
+        expect(scorePerVoteAbsence(label, got).outcome).toBe('agree');
+        expect(scorePerVoteAbsence(label, extraction()).outcome).toBe('missing');
+        expect(scoreAttendanceChanges({ stated: false, asExtracted: [], verified: true }, got).outcome).toBe('agree');
+    });
+});
+
+describe('scoreVotes', () => {
+    const base: ExtractionLabel['votes'] = {
+        phraseAsPrinted: 'Κατά πλειοψηφία', carriesTally: false, namedVoters: 'dissenters_only',
+        asExtracted: [{ name: 'Α Β', vote: 'AGAINST' }], verified: 'agreed',
+    };
+    it('ignores FOR entries when the page only names dissenters', () => {
+        const got = extraction({ voteResult: 'Κατά πλειοψηφία', voteDetails: [{ name: 'Α Β', vote: 'AGAINST' }, { name: 'Γ Δ', vote: 'FOR' }] });
+        expect(scoreVotes(base, got).outcome).toBe('agree');
+    });
+    it('a dropped dissenter is a disagreement, not a lost value', () => {
+        const got = extraction({ voteResult: 'Κατά πλειοψηφία', voteDetails: [] });
+        const s = scoreVotes(base, got);
+        expect(s.outcome).toBe('disagree');
+        expect(s.detail).toContain('AGAINST α β');
+    });
+    it('a declaration stored as a vote is a disagreement', () => {
+        const label = { ...base, asExtracted: [{ name: 'Α Β', vote: 'PRESENT' as const }] };
+        const got = extraction({ voteResult: 'Κατά πλειοψηφία', voteDetails: [{ name: 'Α Β', vote: 'AGAINST' }] });
+        expect(scoreVotes(label, got).outcome).toBe('disagree');
+    });
+    it('a tally the page prints must survive into the phrase', () => {
+        const label = { ...base, phraseAsPrinted: 'με 12 υπέρ και 3 κατά', carriesTally: true };
+        expect(scoreVotes(label, extraction({ voteResult: 'Κατά πλειοψηφία', voteDetails: [{ name: 'Α Β', vote: 'AGAINST' }] })).outcome).toBe('disagree');
+        expect(scoreVotes(label, extraction({ voteResult: 'με 12 υπέρ και 3 κατά', voteDetails: [{ name: 'Α Β', vote: 'AGAINST' }] })).outcome).toBe('agree');
+    });
+});
+
+describe('scoreSubject', () => {
+    it('null is the right answer when the page prints no number', () => {
+        const label: ExtractionLabel['subject'] = { agendaItemNumber: null, isOutOfAgenda: true, verified: true };
+        expect(scoreSubject(label, extraction()).outcome).toBe('agree');
+        const invented = extraction({ subjectInfo: { agendaItemIndex: 1, nonAgendaReason: 'outOfAgenda' } });
+        expect(scoreSubject(label, invented)).toEqual({ outcome: 'disagree', detail: 'page none, extracted OA1' });
+    });
+    it('the same number as a regular item and as an out-of-agenda item are different answers', () => {
+        const label: ExtractionLabel['subject'] = { agendaItemNumber: 2, isOutOfAgenda: true, verified: true };
+        expect(scoreSubject(label, extraction({ subjectInfo: { agendaItemIndex: 2, nonAgendaReason: null } })).outcome).toBe('disagree');
+    });
+});
+
+describe('scoreExcerpt', () => {
+    const label: ExtractionLabel['excerpt'] = { chars: 1000, extractionFlaggedIncomplete: false, verified: 'baseline' };
+    it('tolerates small drift and flags a large one', () => {
+        expect(scoreExcerpt(label, extraction({ decisionExcerpt: 'x'.repeat(1100) })).outcome).toBe('agree');
+        expect(scoreExcerpt(label, extraction({ decisionExcerpt: 'x'.repeat(400) })).outcome).toBe('disagree');
+        expect(scoreExcerpt(label, extraction()).outcome).toBe('missing');
+    });
+});
+
+describe('label states', () => {
+    it('an unresolvable label counts for neither side', () => {
+        const label: ExtractionLabel['votes'] = { phraseAsPrinted: null, carriesTally: false, namedVoters: 'none', asExtracted: [], verified: 'unresolvable' };
+        expect(scoreVotes(label, extraction()).outcome).toBe('unlabelled');
+    });
+    it('an adjudicated label is scored like any other', () => {
+        const label: ExtractionLabel['subject'] = { agendaItemNumber: 2, isOutOfAgenda: false, verified: 'adjudicated' };
+        expect(scoreSubject(label, extraction({ subjectInfo: { agendaItemIndex: 2, nonAgendaReason: null } })).outcome).toBe('agree');
+        expect(scoreSubject(label, extraction({ subjectInfo: { agendaItemIndex: 3, nonAgendaReason: null } })).outcome).toBe('disagree');
+    });
+    it('a confirmed excerpt is scored on presence, not length', () => {
+        const label: ExtractionLabel['excerpt'] = { chars: 0, extractionFlaggedIncomplete: false, verified: true };
+        expect(scoreExcerpt(label, extraction({ decisionExcerpt: 'x'.repeat(3000) })).outcome).toBe('agree');
+        expect(scoreExcerpt(label, extraction()).outcome).toBe('missing');
+    });
+});
+
+describe('tallyScores', () => {
+    it('counts per field, not per document', () => {
+        const label: ExtractionLabel = {
+            rollCall: { presentMembers: ['Α Β'], absentMembers: [], verified: 'agreed' },
+            attendanceChanges: { stated: false, asExtracted: [], verified: 'agreed' },
+            votes: { phraseAsPrinted: 'Ομόφωνα', carriesTally: false, namedVoters: 'none', asExtracted: [], verified: false },
+            subject: { agendaItemNumber: 3, isOutOfAgenda: false, verified: 'agreed' },
+            excerpt: { chars: 10, extractionFlaggedIncomplete: false, verified: 'baseline' },
+        };
+        const got = extraction({ presentMembers: ['Α Β'], voteResult: 'Ομόφωνα', decisionExcerpt: 'x'.repeat(10) });
+        const t = tallyScores([scoreDocument(label, got)]);
+        expect(t.rollCall.agree).toBe(1);
+        expect(t.votes.contested).toBe(1);
+        expect(t.subject.disagree).toBe(1);
+    });
+});
+
+describe('scoreMayor', () => {
+    it('is unlabelled without a label, missing when the page was not read for it', () => {
+        expect(scoreMayor(undefined, extraction()).outcome).toBe('unlabelled');
+        expect(scoreMayor({ present: true, verified: true }, extraction()).outcome).toBe('missing');
+    });
+    it('agrees and disagrees on the flag', () => {
+        const got = extraction({ mayorPresent: { present: false, rawText: 'Απουσίαζε η Δήμαρχος' } });
+        expect(scoreMayor({ present: false, verified: 'agreed' }, got).outcome).toBe('agree');
+        expect(scoreMayor({ present: true, verified: 'agreed' }, got)).toEqual({ outcome: 'disagree', detail: 'page present, extracted absent' });
+    });
+    it('a legacy session_phase label scores a phase anchor as agreeing', () => {
+        const label = { stated: true, anchoredBy: 'session_phase', verified: 'agreed' as const,
+            asExtracted: [{ name: 'Λυδία Βέρα', type: 'arrival' as const, agendaItem: null, timing: null }] };
+        const got = extraction({ attendanceChanges: [{ name: 'Λυδία Βέρα', type: 'arrival', agendaItem: null, timing: null, rawText: '',
+            anchor: { kind: 'phase', agendaItem: null, decisionNumber: null, phase: 'pre_agenda', timing: null } }] });
+        expect(scoreAttendanceChanges(label, got).outcome).toBe('agree');
+    });
+});
+
+describe('scoreVotes with a structured tally', () => {
+    it('a count that moved from the phrase into voteTally still counts as carried', () => {
+        const label = { phraseAsPrinted: 'Εγκρίνεται με ΥΠΕΡ: 10 ψήφους', carriesTally: true, namedVoters: 'none' as const, asExtracted: [], verified: 'agreed' as const };
+        const got = extraction({ voteResult: 'ΟΜΟΦΩΝΑ', voteTally: { FOR: 10, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null } });
+        expect(scoreVotes(label, got).outcome).toBe('agree');
+    });
+});
