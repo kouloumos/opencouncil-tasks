@@ -58,6 +58,21 @@ describe('selectRollCall', () => {
         expect(result.selected!.mayorPresent!.present).toBe(true);
     });
 
+    // Vrilissia ΔΕ: the mayor chairs the committee and is printed inside the list
+    // («Δήμαρχος ως Πρόεδρος της Επιτροπής»). The reader reports that line as the
+    // mayor fact on one document and not on the next, over identical member lists.
+    it('does not let the mayor reading split documents that agree on every member', () => {
+        const result = selectRollCall([pdf(['Alice', 'Bob'], ['Charlie'], true), pdf(['Alice', 'Bob'], ['Charlie'], null)]);
+        expect(result.selected!.presentMembers).toEqual(['Alice', 'Bob']);
+        expect(result.selected!.mayorPresent!.present).toBe(true);
+    });
+
+    it('states no mayor when the winning documents disagree evenly', () => {
+        const result = selectRollCall([pdf(['Alice'], ['Bob'], true), pdf(['Alice'], ['Bob'], false)]);
+        expect(result.selected).not.toBeNull();
+        expect(result.selected!.mayorPresent).toBeNull();
+    });
+
     it('one outlier PDF does not poison the result (the bug we fixed)', () => {
         // 11 PDFs from the correct session, 1 from a different session
         const correct = pdf(

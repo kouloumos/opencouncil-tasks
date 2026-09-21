@@ -15,6 +15,8 @@ interface RollCallEntry {
 interface RollCallGroup {
     entry: RollCallEntry;
     count: number;
+    /** Every mayor reading among the group's documents, stated or not. */
+    mayorReadings: RollCallEntry['mayorPresent'][];
 }
 
 export interface RollCallVoteResult {
@@ -27,15 +29,28 @@ export interface RollCallVoteResult {
 }
 
 /**
- * Serialize a roll call to a comparable key.
- * Normalizes by sorting names (extraction order can vary) and
- * comparing the set of names + mayor status.
+ * Serialize a roll call to a comparable key: the set of names, sorted, since
+ * extraction order varies.
+ *
+ * The mayor is deliberately not part of it. On a committee the mayor chairs he
+ * is printed inside the member list, and the reader reports that line as a
+ * separate mayor fact on some documents and not on others. With the mayor in
+ * the key, two documents agreeing on every member split one against one and
+ * the meeting lost its roll call.
  */
 function serializeRollCall(entry: RollCallEntry, resolve: (name: string) => string): string {
     const present = [...new Set(entry.presentMembers.map(resolve))].sort().join('|');
     const absent = [...new Set(entry.absentMembers.map(resolve))].sort().join('|');
-    const mayor = entry.mayorPresent?.present ?? 'unknown';
-    return `P:${present};;A:${absent};;M:${mayor}`;
+    return `P:${present};;A:${absent}`;
+}
+
+/** The mayor's status by majority among the documents that state one; a tie states none. */
+function majorityMayor(readings: RollCallEntry['mayorPresent'][]): RollCallEntry['mayorPresent'] {
+    const stated = readings.filter((r): r is NonNullable<typeof r> => r != null);
+    const present = stated.filter(r => r.present);
+    const absent = stated.filter(r => !r.present);
+    if (present.length === absent.length) return null;
+    return present.length > absent.length ? present[0] : absent[0];
 }
 
 export function selectRollCall(
@@ -75,8 +90,9 @@ export function selectRollCall(
         const existing = groups.get(key);
         if (existing) {
             existing.count++;
+            existing.mayorReadings.push(e.mayorPresent);
         } else {
-            groups.set(key, { entry, count: 1 });
+            groups.set(key, { entry, count: 1, mayorReadings: [e.mayorPresent] });
         }
     }
 
@@ -84,7 +100,9 @@ export function selectRollCall(
     const best = breakdown[0];
 
     // Majority = >50% of PDFs with roll call data
-    const selected = best.count > withRoll.length / 2 ? best.entry : null;
+    const selected = best.count > withRoll.length / 2
+        ? { ...best.entry, mayorPresent: majorityMayor(best.mayorReadings) }
+        : null;
 
     return { selected, breakdown, emptyCount, totalPdfs };
 }
