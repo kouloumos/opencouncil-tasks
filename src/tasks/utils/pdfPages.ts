@@ -70,3 +70,20 @@ export function headAndTailPages(totalPages: number, head: number, tail: number)
     ];
     return [...new Set(indices)].sort((a, b) => a - b);
 }
+
+/**
+ * The selection as page numbers a reader would recognise: 1-based, and
+ * contiguous runs collapsed. A model told which pages of the document it holds
+ * can report a page number the document itself prints.
+ */
+export function describePageRanges(pageIndices: number[]): string {
+    const pages = [...new Set(pageIndices)].sort((a, b) => a - b).map(i => i + 1);
+    const runs: string[] = [];
+    for (let i = 0; i < pages.length;) {
+        let end = i;
+        while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end++;
+        runs.push(i === end ? `${pages[i]}` : `${pages[i]}-${pages[end]}`);
+        i = end + 1;
+    }
+    return runs.join(' and ');
+}

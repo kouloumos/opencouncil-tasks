@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
-import { extractPdfPageSet, extractPdfPages, headAndTailPages } from './pdfPages.js';
+import { describePageRanges, extractPdfPageSet, extractPdfPages, headAndTailPages } from './pdfPages.js';
 
 /** Built rather than fixtured, so the test carries no binary asset. */
 async function buildPdf(pages: number): Promise<Buffer> {
@@ -51,5 +51,19 @@ describe('headAndTailPages', () => {
 
     it('returns every page when the document is shorter than the window', () => {
         expect(headAndTailPages(2, 3, 2)).toEqual([0, 1]);
+    });
+});
+
+describe('describePageRanges', () => {
+    it('collapses the two ends of a long document into two runs', () => {
+        expect(describePageRanges(headAndTailPages(139, 3, 2))).toBe('1-3 and 138-139');
+    });
+
+    it('reports one run when the ends meet', () => {
+        expect(describePageRanges(headAndTailPages(4, 3, 2))).toBe('1-4');
+    });
+
+    it('reports a single page without a range', () => {
+        expect(describePageRanges([0, 5, 6])).toBe('1 and 6-7');
     });
 });

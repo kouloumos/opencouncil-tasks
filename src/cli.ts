@@ -1809,7 +1809,10 @@ program
 
             const tally = tallyVerdicts(rows);
             console.log(`\n${rows.length} settled — label_wrong ${tally.label_wrong}, reader_wrong ${tally.reader_wrong}, both_wrong ${tally.both_wrong}, needs_human ${tally.needs_human}`);
-            if (stale.length) console.log(`  stale_dispute: ${stale.length} (the scores file predates the cached extraction; re-run the scorer)`);
+            // Not a verdict: these jobs were never sent to the model. The scores file
+            // predates the cached extraction, so the current reading already agrees
+            // with the label and there is nothing left to settle.
+            if (stale.length) console.log(`  not adjudicated, stale dispute: ${stale.length} (the scores file predates the cached extraction; re-run the scorer)`);
             console.log(`  from cache:  ${cached}`);
             console.log(`  model usage: ${formatUsage(totalUsage)}`);
 
@@ -1826,12 +1829,12 @@ program
             }
 
             if (stale.length) {
-                console.log(`\nstale_dispute (${stale.length}) — the current reading already agrees with the label:`);
+                console.log(`\nstale disputes (${stale.length}) — the current reading already agrees with the label:`);
                 for (const s of stale) console.log(`  ${s.ada}  ${s.field.padEnd(18)} ${s.city} / ${s.body}\n      was: ${s.scorerDetail}`);
             }
 
             if (options.outputFile) {
-                fs.writeFileSync(options.outputFile, JSON.stringify({ source: scoresFile, fixture: options.fixture, tally: { ...tally, stale_dispute: stale.length }, rows, stale }, null, 2));
+                fs.writeFileSync(options.outputFile, JSON.stringify({ source: scoresFile, fixture: options.fixture, tally, notAdjudicated: { staleDisputes: stale.length }, rows, stale }, null, 2));
                 console.log(`\nVerdict queue -> ${options.outputFile}`);
             }
         } catch (e) {
