@@ -1,5 +1,5 @@
-import { AttendanceChange, AgendaItemRef, RawExtractedDecision } from './decisionPdfExtraction.js';
-import { computeEffectiveAttendance } from './effectiveAttendance.js';
+import { AttendanceChange, AttendanceAnchor, RawExtractedDecision, changeAnchor } from './decisionPdfExtraction.js';
+import type { AttendanceEvent } from '../../types.js';
 
 /**
  * Resolve and deduplicate attendance changes from multiple PDF extractions.
@@ -52,16 +52,27 @@ export function resolveAndDeduplicateAttendanceChanges(
 
     for (const { raw } of extractions) {
         for (const change of raw.attendanceChanges || []) {
+            // A per-vote absence and a change pinned to the document's own subject belong
+            // to the document that states them, not to the session.
+            if (change.type === 'absent_for_vote' || changeAnchor(change).kind === 'this_document') continue;
             // Resolve name to canonical initial-list form
             const personId = nameToPersonId.get(change.name);
             const canonicalName = personId ? personIdToInitialName.get(personId) : null;
             const resolvedName = canonicalName ?? change.name;
 
-            // Group key: resolved name + type + agendaItem (ignoring timing)
-            const agendaKey = change.agendaItem
+            // Group by who the person is, not by how the name is spelled: with no
+            // roll call to lend a canonical spelling, two documents spelling one
+            // member differently would each count once and both miss the majority.
+            const identity = personId ?? resolvedName;
+
+            // Group key: person + type + anchor (ignoring timing)
+            const anchor = changeAnchor(change);
+            const agendaKey = anchor.kind === 'agenda_item' && change.agendaItem
                 ? `${change.agendaItem.agendaItemIndex}:${change.agendaItem.nonAgendaReason ?? ''}`
+                : anchor.kind === 'decision_number' ? `decision:${anchor.decisionNumber}`
+                : anchor.kind === 'phase' ? `phase:${anchor.phase}`
                 : 'session';
-            const key = `${resolvedName}|${change.type}|${agendaKey}`;
+            const key = `${identity}|${change.type}|${agendaKey}`;
 
             const group = groups.get(key);
             const timingKey = change.timing ?? 'null';
@@ -110,147 +121,37 @@ export function resolveAndDeduplicateAttendanceChanges(
     return result;
 }
 
-export interface MeetingAttendanceData {
-    initialPresent: string[];
-    initialAbsent: string[];
-    attendanceChanges: AttendanceChange[];
-    discussionOrder: AgendaItemRef[] | null;
-    nameToPersonId: Map<string, string>;
-}
-
-export interface SubjectForAttendance {
-    subjectId: string;
-    agendaItemIndex: number | null;
-    /** For out-of-agenda subjects: their sequential OA index (from PDF extraction subjectInfo) */
-    outOfAgendaIndex?: number | null;
-}
-
-export interface SubjectAttendanceResult {
-    subjectId: string;
-    presentMemberIds: string[];
-    absentMemberIds: string[];
-}
-
-/**
- * Build a complete discussion order by merging the partial explicit order
- * (from PDFs) with the full subject list (from the request).
- *
- * The PDF's discussionOrder only mentions items discussed out of their
- * natural sequence (e.g., [1, OA1, 9, OA2, OA3] when #9 was pulled ahead).
- * Remaining subjects follow in standard order: OA items first (sorted by
- * outOfAgendaIndex), then regular items (sorted by agendaItemIndex).
- *
- * Examples:
- * - No explicit order: [OA1, OA2, OA3, #1, #2, ..., #11]
- * - Explicit [1, OA1, 9, OA2, OA3]: [1, OA1, 9, OA2, OA3, #2, #3, ..., #8, #10, #11, #12]
- */
-export function buildCompleteDiscussionOrder(
-    explicitOrder: AgendaItemRef[] | null,
-    subjects: SubjectForAttendance[],
-): AgendaItemRef[] {
-    // Collect all regular agenda items from subjects, sorted numerically
-    const regularRefs: AgendaItemRef[] = subjects
-        .filter(s => s.agendaItemIndex != null)
-        .map(s => ({ agendaItemIndex: s.agendaItemIndex!, nonAgendaReason: null }))
-        .sort((a, b) => a.agendaItemIndex - b.agendaItemIndex);
-
-    // Collect all OA items from subjects, sorted by OA index
-    const oaRefs: AgendaItemRef[] = subjects
-        .filter(s => s.outOfAgendaIndex != null)
-        .map(s => ({ agendaItemIndex: s.outOfAgendaIndex!, nonAgendaReason: 'outOfAgenda' as const }))
-        .sort((a, b) => a.agendaItemIndex - b.agendaItemIndex);
-
-    if (!explicitOrder || explicitOrder.length === 0) {
-        // Standard order: OA items first, then regular items
-        return [...oaRefs, ...regularRefs];
-    }
-
-    // Track which items are already in the explicit order
-    const inExplicit = new Set(
-        explicitOrder.map(r => `${r.agendaItemIndex}:${r.nonAgendaReason ?? ''}`)
-    );
-
-    // Append remaining items not in explicit order: OA first, then regular
-    const remainingOA = oaRefs.filter(r => !inExplicit.has(`${r.agendaItemIndex}:outOfAgenda`));
-    const remainingRegular = regularRefs.filter(r => !inExplicit.has(`${r.agendaItemIndex}:`));
-
-    return [...explicitOrder, ...remainingOA, ...remainingRegular];
-}
-
-/**
- * Compute effective attendance for every subject in the meeting using
- * aggregated meeting-level data from all extracted PDFs.
- *
- * Builds a complete discussion order by merging the PDF's partial explicit
- * order with all regular subjects from the request, then computes effective
- * attendance for each subject using that unified sequence.
- *
- * Handles both regular subjects (agendaItemIndex set) and out-of-agenda
- * subjects (agendaItemIndex null, outOfAgendaIndex set from PDF extraction).
- * Subjects with neither are skipped.
- */
-export function computeAllSubjectAttendance(
-    subjects: SubjectForAttendance[],
-    data: MeetingAttendanceData,
-): SubjectAttendanceResult[] {
-    const results: SubjectAttendanceResult[] = [];
-
-    // Build complete discussion order: explicit order + remaining subjects in numerical order
-    const completeOrder = buildCompleteDiscussionOrder(data.discussionOrder, subjects);
-
-    const formatRef = (r: AgendaItemRef) => r.nonAgendaReason === 'outOfAgenda' ? `OA${r.agendaItemIndex}` : `#${r.agendaItemIndex}`;
-    console.log(`  Complete discussion order: [${completeOrder.map(formatRef).join(', ')}]`);
-    console.log(`  Explicit order from PDFs: ${data.discussionOrder ? `[${data.discussionOrder.map(formatRef).join(', ')}]` : 'null'}`);
-
-    // Build the complete set of agenda item refs (for allAgendaItemNumbers)
-    const refsSeen = new Set<string>();
-    const allRefs: AgendaItemRef[] = [];
-    const addRef = (ref: AgendaItemRef) => {
-        const key = `${ref.agendaItemIndex}:${ref.nonAgendaReason ?? ''}`;
-        if (!refsSeen.has(key)) {
-            refsSeen.add(key);
-            allRefs.push(ref);
-        }
+/** The anchor as the wire carries it; «this document» becomes the document's own subject. */
+export function wireAnchor(a: AttendanceAnchor, subjectId: string): AttendanceEvent['anchor'] {
+    const kind = a.kind === 'this_document' ? 'subject' : a.kind;
+    return {
+        kind,
+        agendaItemIndex: a.agendaItem?.agendaItemIndex ?? null,
+        nonAgendaReason: a.agendaItem?.nonAgendaReason ?? null,
+        decisionNumber: a.decisionNumber,
+        subjectId: kind === 'subject' ? subjectId : null,
+        phase: a.phase,
+        timing: a.timing,
     };
-    for (const ref of completeOrder) addRef(ref);
-    for (const change of data.attendanceChanges) {
-        if (change.agendaItem) addRef(change.agendaItem);
-    }
+}
 
-    for (const subject of subjects) {
-        // Determine the target ref for this subject
-        let targetRef: AgendaItemRef;
-        if (subject.agendaItemIndex != null) {
-            targetRef = { agendaItemIndex: subject.agendaItemIndex, nonAgendaReason: null };
-        } else if (subject.outOfAgendaIndex != null) {
-            targetRef = { agendaItemIndex: subject.outOfAgendaIndex, nonAgendaReason: 'outOfAgenda' };
+/**
+ * The changes one document states, on the wire. A per-vote absence becomes a
+ * departure before and an arrival after the document's own subject; «this
+ * document» anchors become that subject.
+ */
+export function toDocumentEvents(changes: AttendanceChange[], subjectId: string, resolve: (name: string) => string | null): AttendanceEvent[] {
+    const out: AttendanceEvent[] = [];
+    for (const c of changes) {
+        const a = changeAnchor(c);
+        const base = { personId: resolve(c.name), name: c.name, rawText: c.rawText, reportingPdfCount: 1, totalPdfCount: 1 };
+        if (c.type === 'absent_for_vote') {
+            const subject = wireAnchor({ ...a, kind: 'this_document' }, subjectId);
+            out.push({ ...base, type: 'departure', anchor: { ...subject, timing: 'before' } });
+            out.push({ ...base, type: 'arrival', anchor: { ...subject, timing: 'after' } });
         } else {
-            continue; // no position info — can't compute attendance
+            out.push({ ...base, type: c.type, anchor: wireAnchor(a, subjectId) });
         }
-
-        const effective = computeEffectiveAttendance({
-            initialPresent: data.initialPresent,
-            initialAbsent: data.initialAbsent,
-            attendanceChanges: data.attendanceChanges,
-            discussionOrder: completeOrder,
-            allAgendaItemNumbers: allRefs,
-            targetAgendaItemNumber: targetRef,
-        });
-
-        // Convert raw names to personIds
-        const presentMemberIds: string[] = [];
-        const absentMemberIds: string[] = [];
-        for (const name of effective.presentNames) {
-            const id = data.nameToPersonId.get(name);
-            if (id) presentMemberIds.push(id);
-        }
-        for (const name of effective.absentNames) {
-            const id = data.nameToPersonId.get(name);
-            if (id) absentMemberIds.push(id);
-        }
-
-        results.push({ subjectId: subject.subjectId, presentMemberIds, absentMemberIds });
     }
-
-    return results;
+    return out;
 }

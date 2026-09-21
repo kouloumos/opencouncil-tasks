@@ -96,3 +96,15 @@ describe('selectRollCall', () => {
         expect(result.totalPdfs).toBe(5);
     });
 });
+
+describe('selectRollCall with a resolver', () => {
+    it('lets two spellings of one member agree on the roll call', () => {
+        const ids: Record<string, string> = { 'Χρυσούλα Παπαγεωργίου': 'p1', 'Παπαγεωργίου Χρυσούλα': 'p1', 'Λυδία Βέρα': 'p2' };
+        const { selected, breakdown } = selectRollCall([
+            { presentMembers: ['Χρυσούλα Παπαγεωργίου', 'Λυδία Βέρα'], absentMembers: [], mayorPresent: null },
+            { presentMembers: ['Παπαγεωργίου Χρυσούλα', 'Λυδία Βέρα'], absentMembers: [], mayorPresent: null },
+        ], (n) => ids[n] ?? n);
+        expect(breakdown).toHaveLength(1);
+        expect(selected?.presentMembers).toHaveLength(2);
+    });
+});

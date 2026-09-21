@@ -95,7 +95,7 @@ export interface ProcessedDecisionContext {
 }
 
 /**
- * Validate a decision after name matching and vote inference.
+ * Validate a decision after name matching.
  * Catches data quality issues that emerge during processing.
  */
 export function validateProcessedDecision(ctx: ProcessedDecisionContext): DecisionWarning[] {

@@ -9,14 +9,19 @@ import { transcribe } from './tasks/transcribe.js';
 import fs from 'fs';
 import { diarize } from './tasks/diarize.js';
 import { pollDecisions, resolveMeetingDecisions } from './tasks/pollDecisions.js';
-import { extractDecisionFromPdf, adaToPdfUrl, AgendaItemRef } from './tasks/utils/decisionPdfExtraction.js';
+import { extractDecisionFromPdf, adaToPdfUrl, AgendaItemRef, type RawExtractedDecision } from './tasks/utils/decisionPdfExtraction.js';
+import { scoreDocument, tallyScores, FIELDS, type ExtractionLabel, type DocumentScore } from './tasks/utils/extractionScoring.js';
+import { adjudicateField, isAdjudicable, tallyVerdicts, type Adjudication, type AdjudicableField } from './tasks/utils/extractionAdjudication.js';
 import { readDecisionDocument, type DecisionReading } from './tasks/utils/readDecisionDocument.js';
 import { partitionReadDecisions, sameBody, type ReadDecision } from './tasks/utils/decisionPartition.js';
 import { sameDecisionNumber } from './tasks/utils/decisionNumberCompare.js';
+import { type DocumentObservation } from './tasks/utils/documentObservation.js';
+import { buildBodyFactProfile, CONSTANT_FIELDS, PRESENCE_FIELDS } from './tasks/utils/bodyFactProfile.js';
+import { observeDocument, DOCUMENT_CACHE_DIR, OBSERVATION_MODEL } from './tasks/utils/observeDocument.js';
+import { profileBody } from './tasks/profileBody.js';
 import { decisionPdfUrl } from './tasks/utils/resolverMatchDecisions.js';
 import { Diavgeia } from '@schemalabs/diavgeia-cli';
 import type { Decision as DiavgeiaDecision } from '@schemalabs/diavgeia-cli';
-import { processRawExtraction } from './tasks/utils/effectiveAttendance.js';
 import { validateRawExtraction, validateProcessedDecision } from './tasks/utils/decisionValidation.js';
 import { aiChat, formatUsage, HAIKU_MODEL, addUsage, NO_USAGE } from './lib/ai.js';
 import { taskManager } from './lib/TaskManager.js';
@@ -26,6 +31,7 @@ import { showRun } from './lib/runs/show.js';
 import { compareRuns } from './lib/runs/compare.js';
 import { renderComparisonHtml } from './lib/runs/html.js';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { applyDiarization } from './tasks/applyDiarization.js';
 import { getExpressAppWithCallbacks, isUsingMinIO, hasRealSpacesCredentials, extractMeetingId } from './utils.js';
 import { CallbackServer } from './lib/CallbackServer.js';
@@ -685,21 +691,15 @@ program
             if (result.voteResult) parts.push(`vote: ${result.voteResult}`);
             console.log(parts.join(' | '));
 
-            // Compute effective attendance and infer votes (same logic as the pipeline)
-            const processed = processRawExtraction(result);
-
-            if (result.subjectInfo) {
-                console.log(`Effective attendance at #${result.subjectInfo.agendaItemIndex}${result.subjectInfo.nonAgendaReason ? ' (OA)' : ''}: ${processed.effectivePresent.length} present, ${processed.effectiveAbsent.length} absent`);
-            }
-            if (processed.inferredVoteCount > 0) {
-                console.log(`Inferred ${processed.inferredVoteCount} FOR votes from effective present members`);
-            }
+            if (result.presidedBy) console.log(`Presided by: ${result.presidedBy.name}`);
+            const tally = Object.entries(result.voteTally).filter(([, v]) => v != null).map(([k, v]) => `${k} ${v}`).join(', ');
+            if (tally) console.log(`Tally: ${tally}`);
 
             // Validate and display warnings
             const rawWarnings = validateRawExtraction(result);
             const processedWarnings = validateProcessedDecision({
                 voteResult: result.voteResult,
-                voteDetails: processed.voteDetails.map(v => ({ vote: v.vote })),
+                voteDetails: result.voteDetails.map(v => ({ vote: v.vote })),
             });
             const allWarnings = [...rawWarnings, ...processedWarnings];
             if (allWarnings.length > 0) {
@@ -711,9 +711,6 @@ program
 
             const output = {
                 ...result,
-                effectivePresent: processed.effectivePresent,
-                effectiveAbsent: processed.effectiveAbsent,
-                voteDetails: processed.voteDetails,
                 warnings: allWarnings,
             };
             const json = JSON.stringify(output, null, 2);
@@ -1024,6 +1021,100 @@ program
             console.log(`\nPer-subject results -> ${options.outputFile}`);
         }
 
+        server.close();
+    });
+
+program
+    .command('evaluate-decision-extraction <file>')
+    .description('Score the production extractor against the extraction fixture (fixtures/extraction-golden.json): one outcome per field per document. See docs/decision-extraction-eval.md')
+    .option('-c, --concurrency <n>', 'parallel extractions', '4')
+    .option('-l, --limit <n>', 'only extract the first N documents (cost control)')
+    .option('--skip-cache', 'ignore cached extractions and call the model again')
+    .option('-O, --output-file <file>', 'write per-document scores as JSON')
+    .action(async (file: string, options: { concurrency: string; limit?: string; skipCache?: boolean; outputFile?: string }) => {
+        type Row = { ada: string; pdfUrl: string; city: string; body: string; label: ExtractionLabel };
+        const fixture = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
+            version: number;
+            cities: Array<{ cityId: string; bodies: Array<{ name: string; documents: Array<{ ada: string; pdfUrl: string; extraction: ExtractionLabel }> }> }>;
+        };
+        let rows: Row[] = fixture.cities.flatMap((c) => c.bodies.flatMap((b) =>
+            b.documents.map((d) => ({ ada: d.ada, pdfUrl: d.pdfUrl, city: c.cityId, body: b.name, label: d.extraction }))));
+        const totalAvailable = rows.length;
+        const limit = options.limit ? parseInt(options.limit, 10) : undefined;
+        if (limit) rows = rows.slice(0, limit);
+        const concurrency = Math.max(1, parseInt(options.concurrency, 10) || 4);
+
+        type Result = Row & { score: DocumentScore; fromCache: boolean; error?: string };
+        const results: Result[] = [];
+        let totalUsage = { ...NO_USAGE };
+        let cursor = 0;
+        const worker = async () => {
+            while (cursor < rows.length) {
+                const r = rows[cursor++];
+                let got: RawExtractedDecision | null = null;
+                let fromCache = false;
+                let error: string | undefined;
+                try {
+                    // Keyed by the canonical URL so a run shares the cache with pollDecisions,
+                    // whatever form the fixture spells the ADA in.
+                    const out = await extractDecisionFromPdf(adaToPdfUrl(r.ada), undefined, options.skipCache);
+                    got = out.result;
+                    fromCache = out.fromCache;
+                    totalUsage = addUsage(totalUsage, out.usage);
+                } catch (e) {
+                    error = e instanceof Error ? e.message : String(e);
+                    console.warn(`  ${r.ada}: ${error}`);
+                }
+                results.push({ ...r, score: scoreDocument(r.label, got), fromCache, error });
+                if (results.length % 25 === 0) console.log(`  ${results.length}/${rows.length}`);
+            }
+        };
+        await Promise.all(Array.from({ length: concurrency }, worker));
+
+        const pct = (n: number, total: number) => (total ? `${((n / total) * 100).toFixed(1)}%` : '—');
+        const tally = tallyScores(results.map((r) => r.score));
+        console.log(`\nextraction fixture v${fixture.version} — ${results.length} documents${limit ? ` (of ${totalAvailable}, --limit ${limit})` : ''}`);
+        console.log(`  ${'field'.padEnd(18)} ${'agree'.padStart(6)} ${'disagree'.padStart(9)} ${'missing'.padStart(8)} ${'contested'.padStart(10)} ${'unresolv.'.padStart(10)}   agree of scored`);
+        for (const f of FIELDS) {
+            const t = tally[f];
+            const scored = t.agree + t.disagree + t.missing;
+            console.log(`  ${f.padEnd(18)} ${String(t.agree).padStart(6)} ${String(t.disagree).padStart(9)} ${String(t.missing).padStart(8)} ${String(t.contested).padStart(10)} ${String(t.unlabelled).padStart(10)}   ${pct(t.agree, scored)}`);
+        }
+        console.log(`  from cache:        ${results.filter((r) => r.fromCache).length}`);
+        console.log(`  failed:            ${results.filter((r) => r.error).length}`);
+        console.log(`  model usage:       ${formatUsage(totalUsage)}`);
+
+        const groups = new Map<string, Result[]>();
+        for (const r of results) {
+            const k = `${r.city} / ${r.body}`;
+            groups.set(k, [...(groups.get(k) ?? []), r]);
+        }
+        if (groups.size > 1) {
+            console.log(`\nPer body — fields not agreeing (disagree+missing) / scored:`);
+            for (const [k, rs] of [...groups.entries()].sort()) {
+                const cells = FIELDS.map((f) => {
+                    const t = tallyScores(rs.map((r) => r.score))[f];
+                    return `${f.slice(0, 4)} ${t.disagree + t.missing}/${t.agree + t.disagree + t.missing}`;
+                });
+                console.log(`  ${k.padEnd(40)} ${cells.join('  ')}  (${rs.length})`);
+            }
+        }
+
+        const bad = results.flatMap((r) => FIELDS
+            .filter((f) => r.score[f].outcome === 'disagree' || r.score[f].outcome === 'missing')
+            .map((f) => ({ r, f })));
+        if (bad.length) {
+            console.log(`\nNot agreeing — read the page before changing either side:`);
+            for (const { r, f } of bad.slice(0, 40)) {
+                console.log(`  ${r.ada}  ${f.padEnd(17)} ${r.score[f].outcome.padEnd(8)} ${r.score[f].detail}  (${r.city} / ${r.body})`);
+            }
+            if (bad.length > 40) console.log(`  … ${bad.length - 40} more; use -O for the full list`);
+        }
+
+        if (options.outputFile) {
+            fs.writeFileSync(options.outputFile, JSON.stringify({ source: file, tally, results: results.map(({ label: _label, ...rest }) => rest) }, null, 2));
+            console.log(`\nPer-document scores -> ${options.outputFile}`);
+        }
         server.close();
     });
 
@@ -1357,6 +1448,392 @@ tasksCommand
         try {
             const result = await tasksServerRequest(`/tasks/${encodeURIComponent(taskId)}/promote`, 'POST');
             console.log(`${result.taskId}: llmMode=${result.llmMode}`);
+        } catch (e) {
+            console.error(e instanceof Error ? e.message : e);
+            process.exitCode = 1;
+        } finally {
+            server.close();
+        }
+    });
+
+
+program
+    .command('observe-documents <file>')
+    .description('Read every sampled decision with the model and record what it states. Production-faithful: reads the rendered page, so a scrambled text layer is no obstacle. Input: opencouncil/scripts/export-body-corpus.ts output. See docs/body-profiles.md')
+    .option('-c, --concurrency <n>', 'parallel reads', '6')
+    .option('-b, --body <name>', 'only bodies whose "city / name" contains this string')
+    .option('-m, --model <id>', 'model to read with', HAIKU_MODEL)
+    .option('-l, --limit <n>', 'only the first N documents per body (cost control)')
+    .option('--cache-dir <dir>', 'where PDFs and observations live', DOCUMENT_CACHE_DIR)
+    .option('--skip-cache', 'ignore cached observations and read again')
+    .option('-O, --output-file <file>', 'write observations as JSON')
+    .action(async (file: string, options: { concurrency: string; body?: string; model: string; limit?: string; cacheDir: string; skipCache?: boolean; outputFile?: string }) => {
+        const input = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
+            bodies: Array<{
+                cityId: string;
+                administrativeBody: { id: string; name: string };
+                corpusSize: number;
+                sample: Array<{ ada: string; pdfUrl: string; meetingDate: string }>;
+            }>;
+        };
+
+        const bodies = options.body
+            ? input.bodies.filter(b => `${b.cityId} / ${b.administrativeBody.name}`.includes(options.body!))
+            : input.bodies;
+        const concurrency = Math.max(1, parseInt(options.concurrency, 10) || 6);
+        const limit = options.limit ? parseInt(options.limit, 10) : undefined;
+        let totalUsage = { ...NO_USAGE };
+        let read = 0;
+        let cached = 0;
+        let failed = 0;
+        const out: Array<Record<string, unknown>> = [];
+
+        for (const body of bodies) {
+            const label = `${body.cityId} / ${body.administrativeBody.name}`;
+            const sample = limit ? body.sample.slice(0, limit) : body.sample;
+            const observations: Array<{ ada: string; pages: number; observation: DocumentObservation }> = [];
+            let cursor = 0;
+
+            const worker = async () => {
+                while (cursor < sample.length) {
+                    const d = sample[cursor++];
+                    try {
+                        const { observation, pages, usage, fromCache } = await observeDocument(d.ada, {
+                            model: options.model,
+                            cacheDir: options.cacheDir,
+                            skipCache: options.skipCache,
+                        });
+                        totalUsage = addUsage(totalUsage, usage);
+                        observations.push({ ada: d.ada, pages, observation });
+                        if (fromCache) cached++; else read++;
+                    } catch (e) {
+                        failed++;
+                        console.warn(`  ${d.ada}: ${e instanceof Error ? e.message : e}`);
+                    }
+                }
+            };
+            await Promise.all(Array.from({ length: concurrency }, worker));
+
+            console.log(`${label.padEnd(44)} ${String(observations.length).padStart(3)}/${sample.length} observed`);
+            out.push({ ...body, observations });
+        }
+
+        console.log(`\nread ${read}, from cache ${cached}, failed ${failed}`);
+        console.log(`model ${options.model}: ${formatUsage(totalUsage)}`);
+
+        if (options.outputFile) {
+            fs.writeFileSync(options.outputFile, JSON.stringify({ source: file, model: options.model, bodies: out }, null, 2));
+            console.log(`Observations -> ${options.outputFile}`);
+        }
+
+        server.close();
+    });
+
+
+program
+    .command('body-facts <file>')
+    .description('Aggregate document observations into a per-body picture of what each administrative body states, and flag what needs a person. Input: observe-documents -O output. See docs/body-profiles.md')
+    .option('-O, --output-file <file>', 'write the per-body facts as JSON')
+    .action(async (file: string, options: { outputFile?: string }) => {
+        const input = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
+            model: string;
+            bodies: Array<{
+                cityId: string;
+                administrativeBody: { id: string; name: string };
+                corpusSize: number;
+                observations: Array<{ ada: string; pages: number; observation: DocumentObservation }>;
+            }>;
+        };
+
+        const out = input.bodies.map(b => ({
+            cityId: b.cityId,
+            administrativeBody: b.administrativeBody,
+            corpusSize: b.corpusSize,
+            sampled: b.observations.length,
+            adas: b.observations.map(o => o.ada),
+            facts: buildBodyFactProfile(b.observations.map(o => o.observation)),
+        }));
+
+        const needsReview = out.filter(b => b.facts.reviewReasons.length > 0);
+        console.log(`${out.length} bodies, read with ${input.model}\n`);
+
+        for (const b of out) {
+            const f = b.facts;
+            console.log(`${b.cityId} / ${b.administrativeBody.name}  —  ${f.documents} of ${b.corpusSize}${f.notDecisions ? `, ${f.notDecisions} not decisions` : ''}`);
+            console.log(`  roll call:  ${f.categories.rollCallForm.dominant ?? '—'}${f.categories.rollCallForm.dissent > 0 ? ` (${Math.round(f.categories.rollCallForm.dissent * 100)}% differ)` : ''}`);
+            console.log(`  present set includes late arrivals: ${f.rollCallIsCumulative === null ? 'not testable in this sample' : f.rollCallIsCumulative ? 'YES — cumulative' : 'no — opening roll call only'}  (${f.cumulativeEvidence.cumulative} vs ${f.cumulativeEvidence.openingOnly})`);
+            console.log(`  changes:    ${Math.round(f.presence.attendanceChangesStated.percent)}% of documents, pinned to ${f.categories.attendanceChangePinnedTo.dominant ?? 'nothing observed'}`);
+            const notable = PRESENCE_FIELDS
+                .filter(k => f.presence[k].percent >= 20 && k !== 'attendanceChangesStated')
+                .map(k => `${k} ${Math.round(f.presence[k].percent)}%`);
+            if (notable.length) console.log(`  also:       ${notable.join(', ')}`);
+            if (f.headings.length) console.log(`  headings:   ${f.headings.slice(0, 4).map(h => `${h.heading} (${h.count})`).join(' · ')}`);
+            if (f.reviewReasons.length) console.log(`  REVIEW:     ${f.reviewReasons.join(', ')}`);
+            console.log('');
+        }
+
+        console.log(`\n${needsReview.length} of ${out.length} bodies need a person to look:`);
+        const byReason = new Map<string, string[]>();
+        for (const b of needsReview) {
+            for (const r of b.facts.reviewReasons) {
+                const list = byReason.get(r) ?? [];
+                list.push(`${b.cityId}/${b.administrativeBody.name}`);
+                byReason.set(r, list);
+            }
+        }
+        for (const [reason, bodies] of [...byReason.entries()].sort((a, b) => b[1].length - a[1].length)) {
+            console.log(`  ${reason} (${bodies.length}): ${bodies.slice(0, 6).join(', ')}${bodies.length > 6 ? ' …' : ''}`);
+        }
+
+        if (options.outputFile) {
+            fs.writeFileSync(options.outputFile, JSON.stringify({ source: file, model: input.model, bodies: out }, null, 2));
+            console.log(`\nBody facts -> ${options.outputFile}`);
+        }
+
+        server.close();
+    });
+
+
+program
+    .command('topup-corpus <file>')
+    .description('Top up thin administrative bodies with documents fetched straight from Diavgeia. Our linked decisions only cover meetings we already hold, which is exactly what a new or lightly covered body lacks. Input: opencouncil/scripts/export-body-corpus.ts output. See docs/body-profiles.md')
+    .option('-t, --threshold <n>', 'top up bodies holding fewer than this many linked decisions', '40')
+    .option('-n, --target <n>', 'documents to reach per body', '40')
+    .option('--from <date>', 'earliest issue date to search', '2024-01-01')
+    .option('-b, --body <name>', 'only bodies whose "city / name" contains this string')
+    .option('-O, --output-file <file>', 'write the topped-up corpus as JSON')
+    .action(async (file: string, options: { threshold: string; target: string; from: string; body?: string; outputFile?: string }) => {
+        const input = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
+            bodies: Array<Record<string, any>>;
+            skippedBodies?: Array<Record<string, any>>;
+        };
+        const threshold = parseInt(options.threshold, 10);
+        const target = parseInt(options.target, 10);
+        const diavgeia = new Diavgeia();
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Bodies we already track but hold too little of, plus bodies we hold
+        // nothing of at all — the second kind never reaches the profile
+        // otherwise, and a supported municipality can have one.
+        const candidates = [
+            ...input.bodies.filter(b => b.corpusSize < threshold),
+            ...(input.skippedBodies ?? []).map(b => ({
+                cityId: b.cityId,
+                administrativeBody: { id: null, name: b.name },
+                corpusSize: b.linkedDecisions ?? 0,
+                meetings: 0, meetingsSampled: 0, sample: [],
+                diavgeia: b.diavgeia,
+            })),
+        ].filter(b => !options.body || `${b.cityId} / ${b.administrativeBody.name}`.includes(options.body));
+
+        console.log(`${candidates.length} bodies below ${threshold} linked decisions\n`);
+        const out = [...input.bodies];
+
+        for (const body of candidates) {
+            const label = `${body.cityId} / ${body.administrativeBody.name}`;
+            const units: string[] = body.diavgeia?.unitIds ?? [];
+            const org: string | null = body.diavgeia?.orgUid ?? null;
+            if (!org) { console.log(`${label.padEnd(44)} skipped: the city has no Diavgeia org uid`); continue; }
+            if (units.length === 0) {
+                console.log(`${label.padEnd(44)} skipped: no Diavgeia unit id, so its acts cannot be separated from the city's firehose`);
+                continue;
+            }
+
+            const have = new Set((body.sample ?? []).map((d: any) => d.ada));
+            const found: Array<Record<string, unknown>> = [];
+            for (const unit of units) {
+                if (have.size + found.length >= target) break;
+                // A unit entry may carry a signer, `unit[:signer]`, which is how
+                // bodies sharing one unit are separated.
+                const [unitId, signer] = unit.split(':');
+                try {
+                    for await (const d of diavgeia.searchAll({
+                        org, unit: unitId, ...(signer ? { signer } : {}),
+                        from_issue_date: options.from, to_issue_date: today, status: 'PUBLISHED',
+                    })) {
+                        if (have.has(d.ada) || found.some(f => f.ada === d.ada)) continue;
+                        found.push({
+                            ada: d.ada, pdfUrl: decisionPdfUrl(d), meetingId: null,
+                            // Diavgeia gives issueDate as epoch milliseconds.
+                            meetingDate: d.issueDate ? new Date(d.issueDate).toISOString().slice(0, 10) : null,
+                            agendaItemIndex: null, decisionNumber: d.protocolNumber ?? null,
+                            extracted: null, fromDiavgeia: true,
+                        });
+                        if (have.size + found.length >= target * 3) break; // over-fetch, then thin below
+                    }
+                } catch (e) {
+                    console.warn(`  ${label}: unit ${unitId} failed — ${e instanceof Error ? e.message : e}`);
+                }
+            }
+
+            // Spread across the period rather than taking the newest, so a
+            // template change inside the window stays visible.
+            const need = Math.max(0, target - have.size);
+            const step = found.length > need && need > 0 ? (found.length - 1) / (need - 1 || 1) : 1;
+            const picked = found.length > need
+                ? Array.from({ length: need }, (_, i) => found[Math.round(i * step)]).filter(Boolean)
+                : found;
+
+            const existing = out.find(b => b.cityId === body.cityId && b.administrativeBody.name === body.administrativeBody.name);
+            if (existing) {
+                existing.sample = [...(existing.sample ?? []), ...picked];
+                existing.toppedUpFromDiavgeia = picked.length;
+            } else {
+                out.push({ ...body, sample: picked, toppedUpFromDiavgeia: picked.length, corpusSize: picked.length });
+            }
+            console.log(`${label.padEnd(44)} held ${String(have.size).padStart(3)} · found ${String(found.length).padStart(4)} on Diavgeia · added ${picked.length}`);
+        }
+
+        if (options.outputFile) {
+            fs.writeFileSync(options.outputFile, JSON.stringify({ ...input, bodies: out }, null, 2));
+            console.log(`\nTopped-up corpus -> ${options.outputFile}`);
+        }
+        server.close();
+    });
+
+program
+    .command('profile-body <cityId> <administrativeBodyId>')
+    .description("Profile one administrative body's decision conventions straight from its Diavgeia documents, the way the /profileBody task does. Prints the conventions record. See docs/body-profiles.md")
+    .requiredOption('-u, --uid <org>', 'Diavgeia organization UID of the city')
+    .requiredOption('--unit <id...>', "Diavgeia unit ids to search, `unit` or `unit:signer` each")
+    .option('-n, --sample-size <n>', 'documents to read', '40')
+    .option('--from <date>', 'earliest issue date to search', '2024-01-01')
+    .option('--skip-cache', 'ignore cached readings and read again')
+    .option('-O, --output-file <file>', 'write the full result (conventions, facts, adas) as JSON')
+    .action(async (cityId: string, administrativeBodyId: string, options: { uid: string; unit: string[]; sampleSize: string; from: string; skipCache?: boolean; outputFile?: string }) => {
+        try {
+            const result = await profileBody(
+                {
+                    callbackUrl: '', // Not used for CLI
+                    cityId,
+                    administrativeBodyId,
+                    diavgeiaUid: options.uid,
+                    diavgeiaUnitIds: options.unit,
+                    sampleSize: parseInt(options.sampleSize, 10),
+                    fromDate: options.from,
+                    skipCache: options.skipCache,
+                },
+                (stage: string, progressPercent: number) => {
+                    process.stdout.write(`\r[${stage}] ${progressPercent.toFixed(0)}%`.padEnd(60));
+                },
+            );
+            process.stdout.write('\n');
+
+            console.log(`\nRead ${result.adas.length} documents, ${result.facts.documents} of them deliberative decisions`);
+            if (result.facts.reviewReasons.length) console.log(`Needs a person: ${result.facts.reviewReasons.join(', ')}`);
+            console.log(`${formatUsage({ ...NO_USAGE, ...result.usage })}\n`);
+            console.log(JSON.stringify(result.conventions, null, 2));
+
+            if (options.outputFile) {
+                fs.writeFileSync(options.outputFile, JSON.stringify(result, null, 2));
+                console.log(`\nProfile -> ${options.outputFile}`);
+            }
+        } catch (e) {
+            console.error(e instanceof Error ? e.message : e);
+            process.exitCode = 1;
+        } finally {
+            server.close();
+        }
+    });
+
+program
+    .command('adjudicate-extraction <scoresFile>')
+    .description('Settle scorer disagreements by reading the page: one verdict per field per document, each carrying the quote that justified it. Writes nothing — see docs/decision-extraction-eval.md')
+    .option('-f, --fixture <file>', 'the fixture the scores were produced from', 'fixtures/extraction-golden.json')
+    .option('--field <field>', 'only this field (subject | votes | attendanceChanges | rollCall)')
+    .option('-c, --concurrency <n>', 'parallel adjudications', '4')
+    .option('-l, --limit <n>', 'only the first N disagreements (cost control)')
+    .option('--skip-cache', 'ignore cached adjudications and read the pages again')
+    .option('-O, --output-file <file>', 'write the verdict queue as JSON')
+    .action(async (scoresFile: string, options: { fixture: string; field?: string; concurrency: string; limit?: string; skipCache?: boolean; outputFile?: string }) => {
+        try {
+            const scores = JSON.parse(fs.readFileSync(scoresFile, 'utf-8')) as {
+                results: Array<{ ada: string; city: string; body: string; score: DocumentScore }>;
+            };
+            const fixture = JSON.parse(fs.readFileSync(options.fixture, 'utf-8')) as {
+                cities: Array<{ cityId: string; bodies: Array<{ name: string; documents: Array<{ ada: string; extraction: ExtractionLabel }> }> }>;
+            };
+            const labels = new Map<string, ExtractionLabel>();
+            for (const c of fixture.cities) for (const b of c.bodies) for (const d of b.documents) labels.set(d.ada, d.extraction);
+
+            type Job = { ada: string; city: string; body: string; field: AdjudicableField; scorerDetail: string };
+            let jobs: Job[] = [];
+            for (const r of scores.results) {
+                for (const f of FIELDS) {
+                    const s = r.score[f];
+                    if (s.outcome !== 'disagree' && s.outcome !== 'missing') continue;
+                    if (!isAdjudicable(f)) continue;
+                    if (options.field && options.field !== f) continue;
+                    jobs.push({ ada: r.ada, city: r.city, body: r.body, field: f, scorerDetail: s.detail });
+                }
+            }
+            const totalAvailable = jobs.length;
+            const limit = options.limit ? parseInt(options.limit, 10) : undefined;
+            if (limit) jobs = jobs.slice(0, limit);
+
+            console.log(`${jobs.length} disagreement(s) to settle${limit ? ` (of ${totalAvailable}, --limit ${limit})` : ''} over ${new Set(jobs.map(j => j.ada)).size} document(s)\n`);
+
+            const rows: Adjudication[] = [];
+            const stale: Array<Job & { now: { outcome: string; detail: string } }> = [];
+            let totalUsage = { ...NO_USAGE };
+            let cached = 0;
+            let cursor = 0;
+            const concurrency = Math.max(1, parseInt(options.concurrency, 10) || 4);
+            const worker = async () => {
+                while (cursor < jobs.length) {
+                    const j = jobs[cursor++];
+                    const label = labels.get(j.ada);
+                    if (!label) { console.warn(`  ${j.ada}: not in ${options.fixture}, skipped`); continue; }
+                    try {
+                        // Cached from the scorer's own run, so this costs nothing.
+                        const { result: got } = await extractDecisionFromPdf(adaToPdfUrl(j.ada));
+                        // The scores file can predate the extraction now cached. Scoring the
+                        // current reading settles that for free, and reading the page to
+                        // adjudicate a disagreement that no longer exists would be incoherent.
+                        const now = scoreDocument(label, got)[j.field];
+                        if (now.outcome === 'agree') {
+                            stale.push({ ...j, now });
+                            continue;
+                        }
+                        const out = await adjudicateField({ ...j, label, got, skipCache: options.skipCache });
+                        rows.push(out.result);
+                        totalUsage = addUsage(totalUsage, out.usage);
+                        if (out.fromCache) cached++;
+                    } catch (e) {
+                        console.warn(`  ${j.ada} ${j.field}: ${e instanceof Error ? e.message : e}`);
+                    }
+                    if (rows.length % 10 === 0 && rows.length) console.log(`  ${rows.length}/${jobs.length}`);
+                }
+            };
+            await Promise.all(Array.from({ length: concurrency }, worker));
+
+            const tally = tallyVerdicts(rows);
+            console.log(`\n${rows.length} settled — label_wrong ${tally.label_wrong}, reader_wrong ${tally.reader_wrong}, both_wrong ${tally.both_wrong}, needs_human ${tally.needs_human}`);
+            if (stale.length) console.log(`  stale_dispute: ${stale.length} (the scores file predates the cached extraction; re-run the scorer)`);
+            console.log(`  from cache:  ${cached}`);
+            console.log(`  model usage: ${formatUsage(totalUsage)}`);
+
+            for (const verdict of ['label_wrong', 'reader_wrong', 'both_wrong', 'needs_human'] as const) {
+                const of = rows.filter(r => r.verdict === verdict);
+                if (!of.length) continue;
+                console.log(`\n${verdict} (${of.length}):`);
+                for (const r of of) {
+                    console.log(`  ${r.ada}  ${r.field.padEnd(18)} ${r.city} / ${r.body}`);
+                    console.log(`      scorer: ${r.scorerDetail}`);
+                    console.log(`      page:   ${r.reason}`);
+                    if (r.observation.quote) console.log(`      quote:  «${r.observation.quote.replace(/\s+/g, ' ').slice(0, 160)}» (p${r.observation.page}, ${r.corroboration}/${r.textLayer})`);
+                }
+            }
+
+            if (stale.length) {
+                console.log(`\nstale_dispute (${stale.length}) — the current reading already agrees with the label:`);
+                for (const s of stale) console.log(`  ${s.ada}  ${s.field.padEnd(18)} ${s.city} / ${s.body}\n      was: ${s.scorerDetail}`);
+            }
+
+            if (options.outputFile) {
+                fs.writeFileSync(options.outputFile, JSON.stringify({ source: scoresFile, fixture: options.fixture, tally: { ...tally, stale_dispute: stale.length }, rows, stale }, null, 2));
+                console.log(`\nVerdict queue -> ${options.outputFile}`);
+            }
         } catch (e) {
             console.error(e instanceof Error ? e.message : e);
             process.exitCode = 1;

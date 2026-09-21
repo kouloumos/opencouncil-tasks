@@ -72,8 +72,13 @@ import {
     matchPersonByName,
     matchAllMembers,
     llmMatchMembers,
-    inferForVotes,
-} from "./decisionPdfExtraction.js";
+    sameGreekPerson,
+    greekNameInList,
+    withDefaults,
+    extractionCacheKey,
+    EXTRACTION_SCHEMA_VERSION, adoptLaterVoteNames } from './decisionPdfExtraction.js';
+import type { RawExtractedDecision, AttendanceAnchor } from './decisionPdfExtraction.js';
+import type { AttendanceAnchorKind as WireAnchorKind, AttendancePhase as WirePhase } from '../../types.js';
 
 const noUsage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
 
@@ -107,6 +112,24 @@ describe('normalizeGreekName', () => {
 });
 
 // --- tokenSortKey / tokenSortKeys tests ---
+
+describe('sameGreekPerson', () => {
+    it('matches surname plus initial against the spelled-out name', () => {
+        expect(sameGreekPerson('Αθανασάκης Σ.', 'Σπύρος (Σάκης) Αθανασάκης')).toBe(true);
+        expect(sameGreekPerson('Καρύδας Δ.-Ε.', 'ΚΑΡΥΔΑΣ ΔΗΜΗΤΡΙΟΣ-ΕΥΑΓΓΕΛΟΣ')).toBe(true);
+        expect(sameGreekPerson('Χαμντί Ντ.', 'Χαμντί Ντάφερ')).toBe(true);
+    });
+    it('does not match a different surname or a wrong initial', () => {
+        expect(sameGreekPerson('Αθανασάκης Γ.', 'Σπύρος Αθανασάκης')).toBe(false);
+        expect(sameGreekPerson('Βέρα Λ.', 'Λυδία Πάλλα')).toBe(false);
+        expect(sameGreekPerson('Σ.', 'Σπύρος Αθανασάκης')).toBe(false);
+    });
+    it('subtracts abbreviated absentees from a composition', () => {
+        const composition = ['Σπύρος (Σάκης) Αθανασάκης', 'Λυδία Βέρα', 'Παναγιώτης Κουφάκης'];
+        const absent = ['Αθανασάκης Σ.', 'Βέρα Λ.'];
+        expect(composition.filter(n => !greekNameInList(n, absent))).toEqual(['Παναγιώτης Κουφάκης']);
+    });
+});
 
 describe('tokenSortKey', () => {
     it('sorts tokens alphabetically for order-insensitive matching', () => {
@@ -205,6 +228,25 @@ describe('matchMembersToPersonIds', () => {
 
 // --- matchPersonByName tests ---
 
+describe('matchMembersToPersonIds abbreviated fallback', () => {
+    const people = [
+        { id: 'gazi', name: 'Ευαγγελία Γαζή' },
+        { id: 'ath', name: 'Σπύρος Αθανασάκης' },
+        { id: 'pap1', name: 'Γεώργιος Παπαδόπουλος' },
+        { id: 'pap2', name: 'Γιάννης Παπαδόπουλος' },
+    ];
+    it('matches a middle name and a surname-plus-initial when unique', () => {
+        const r = matchMembersToPersonIds(['Ευαγγελία Λίλιαν Γαζή', 'Αθανασάκης Σ.'], people);
+        expect(r.matchedIds).toEqual(['gazi', 'ath']);
+        expect(r.unmatched).toEqual([]);
+    });
+    it('leaves an ambiguous initial unmatched', () => {
+        const r = matchMembersToPersonIds(['Παπαδόπουλος Γ.'], people);
+        expect(r.matchedIds).toEqual([]);
+        expect(r.unmatched).toEqual(['Παπαδόπουλος Γ.']);
+    });
+});
+
 describe('matchPersonByName', () => {
     const people = [
         { id: 'p1', name: 'Ευσταθία Βαμβάκα' },
@@ -225,6 +267,12 @@ describe('matchPersonByName', () => {
 });
 
 // --- llmMatchMembers tests ---
+
+describe('matchPersonByName abbreviated fallback', () => {
+    it('resolves a middle name the roster does not carry', () => {
+        expect(matchPersonByName('Ευαγγελία Λιλιάν Γαζή', [{ id: 'gazi', name: 'Ευαγγελία Γαζή' }, { id: 'x', name: 'Λυδία Βέρα' }])).toBe('gazi');
+    });
+});
 
 describe('llmMatchMembers', () => {
     beforeEach(() => {
@@ -303,6 +351,24 @@ describe('llmMatchMembers', () => {
 
 // --- matchAllMembers tests (two-step) ---
 
+describe('llmMatchMembers', () => {
+    it('rejects an id the model invented instead of copying', async () => {
+        mockAiChat.mockResolvedValueOnce({
+            result: { matches: [
+                { name: 'Ευαγγελία Λίλιαν Γαζή', personId: 'p1' },
+                { name: 'Σ. Αθανασάκης', personId: 'p1-spliced-p2' },
+            ] },
+            usage: { input_tokens: 1, output_tokens: 1 },
+        });
+        const { matched, stillUnmatched } = await llmMatchMembers(
+            ['Ευαγγελία Λίλιαν Γαζή', 'Σ. Αθανασάκης'],
+            [{ id: 'p1', name: 'Ευαγγελία Γαζή' }, { id: 'p2', name: 'Σπύρος Αθανασάκης' }],
+        );
+        expect(matched).toEqual([{ name: 'Ευαγγελία Λίλιαν Γαζή', personId: 'p1' }]);
+        expect(stillUnmatched).toEqual(['Σ. Αθανασάκης']);
+    });
+});
+
 describe('matchAllMembers', () => {
     beforeEach(() => {
         mockAiChat.mockReset();
@@ -356,95 +422,81 @@ describe('matchAllMembers', () => {
     });
 });
 
-// --- inferForVotes tests ---
+// --- cached-reading migration ---
 
-describe('inferForVotes', () => {
-    it('infers FOR votes from present members when majority with no explicit FOR', () => {
-        const result = inferForVotes(
-            ['Alice', 'Bob', 'Charlie'],
-            'Κατά πλειοψηφία',
-            [{ name: 'Charlie', vote: 'AGAINST' }],
-        );
-        expect(result.inferredCount).toBe(2);
-        expect(result.voteDetails).toEqual([
-            { name: 'Charlie', vote: 'AGAINST' },
-            { name: 'Alice', vote: 'FOR' },
-            { name: 'Bob', vote: 'FOR' },
-        ]);
+describe('extractionCacheKey', () => {
+    it('versions the key, so a reading written by an older prompt is never found', () => {
+        expect(extractionCacheKey('https://example.com/a.pdf')).toBe(`https://example.com/a.pdf#v${EXTRACTION_SCHEMA_VERSION}`);
+        expect(extractionCacheKey('https://example.com/a.pdf')).not.toBe('https://example.com/a.pdf');
     });
 
-    it('does not infer when explicit FOR votes exist', () => {
-        const result = inferForVotes(
-            ['Alice', 'Bob'],
-            'Κατά πλειοψηφία',
-            [{ name: 'Alice', vote: 'FOR' }],
-        );
-        expect(result.inferredCount).toBe(0);
-        expect(result.voteDetails).toEqual([{ name: 'Alice', vote: 'FOR' }]);
+    it('keeps a hinted reading apart from a plain one, both under the version', () => {
+        const plain = extractionCacheKey('https://example.com/a.pdf');
+        const hinted = extractionCacheKey('https://example.com/a.pdf', 'the body prints ΣΥΝΘΕΣΗ');
+        expect(hinted).not.toBe(plain);
+        expect(hinted.startsWith(`${plain}#`)).toBe(true);
+    });
+});
+
+describe('withDefaults', () => {
+    const WIRE_KINDS: WireAnchorKind[] = ['agenda_item', 'decision_number', 'subject', 'phase', 'session_start', 'session_end'];
+    const WIRE_PHASES: (WirePhase | null)[] = ['pre_agenda', 'out_of_agenda', null];
+
+    const cachedWithAnchor = (anchor: Record<string, unknown>) => ({
+        attendanceChanges: [{ name: 'Α Β', type: 'departure', agendaItem: null, timing: null, anchor, rawText: 'x' }],
+    }) as unknown as RawExtractedDecision;
+
+    const migratedAnchor = (anchor: Record<string, unknown>): AttendanceAnchor =>
+        withDefaults(cachedWithAnchor(anchor)).attendanceChanges[0].anchor!;
+
+    const retired = (over: Record<string, unknown>) => ({ agendaItem: null, decisionNumber: null, timing: null, ...over });
+
+    it('turns the retired session_phase anchor into a phase the wire declares', () => {
+        expect(migratedAnchor(retired({ kind: 'session_phase', phase: 'μετά την ψήφιση του κατεπείγοντος' })))
+            .toMatchObject({ kind: 'phase', phase: 'pre_agenda' });
+        expect(migratedAnchor(retired({ kind: 'session_phase', phase: 'εκτός ημερησίας διατάξεως' })))
+            .toMatchObject({ kind: 'phase', phase: 'out_of_agenda' });
+        expect(migratedAnchor(retired({ kind: 'session_phase', phase: 'συζήτηση Ε.Η.Δ. θέματος' })))
+            .toMatchObject({ kind: 'phase', phase: 'out_of_agenda' });
     });
 
-    it('infers FOR votes for all present members when unanimous', () => {
-        const result = inferForVotes(
-            ['Alice', 'Bob'],
-            'Ομόφωνα',
-            [],
-        );
-        expect(result.inferredCount).toBe(2);
-        expect(result.voteDetails).toEqual([
-            { name: 'Alice', vote: 'FOR' },
-            { name: 'Bob', vote: 'FOR' },
-        ]);
+    it('turns the retired clock_time anchor into the start of the session', () => {
+        expect(migratedAnchor(retired({ kind: 'clock_time', phase: null })))
+            .toMatchObject({ kind: 'session_start', phase: null });
     });
 
-    it('does not infer with empty present members', () => {
-        const result = inferForVotes(
-            [],
-            'Κατά πλειοψηφία',
-            [{ name: 'Charlie', vote: 'AGAINST' }],
-        );
-        expect(result.inferredCount).toBe(0);
+    it('drops a free-text phase riding a kind that is not phase', () => {
+        expect(migratedAnchor(retired({ kind: 'this_document', phase: 'πριν την ψηφοφορία' })))
+            .toMatchObject({ kind: 'this_document', phase: null });
     });
 
-    it('returns a new array without mutating the input', () => {
-        const originalDetails = [{ name: 'Charlie', vote: 'AGAINST' as const }];
-        const result = inferForVotes(
-            ['Alice', 'Bob', 'Charlie'],
-            'Κατά πλειοψηφία',
-            originalDetails,
-        );
-        // Original array not modified
-        expect(originalDetails).toHaveLength(1);
-        // Result has more entries
-        expect(result.voteDetails).toHaveLength(3);
+    it('leaves an anchor already in the v4 vocabulary alone', () => {
+        const anchor = retired({ kind: 'phase', phase: 'out_of_agenda' });
+        expect(migratedAnchor(anchor)).toMatchObject({ kind: 'phase', phase: 'out_of_agenda' });
+        expect(migratedAnchor(retired({ kind: 'agenda_item', agendaItem: { agendaItemIndex: 3, nonAgendaReason: null }, timing: 'during' })))
+            .toMatchObject({ kind: 'agenda_item', phase: null });
     });
 
-    it('handles null voteResult', () => {
-        const result = inferForVotes(['Alice'], null, []);
-        expect(result.inferredCount).toBe(0);
+    it('never emits a kind or a phase outside what the wire declares', () => {
+        for (const kind of ['session_phase', 'clock_time', 'this_document', 'agenda_item']) {
+            for (const phase of ['μετά την ψήφιση', 'εκτός ημερησίας', 'pre_agenda', null]) {
+                const a = migratedAnchor(retired({ kind, phase }));
+                // `this_document` is the extractor's own name for the wire's `subject`.
+                expect([...WIRE_KINDS, 'this_document']).toContain(a.kind);
+                expect(WIRE_PHASES).toContain(a.phase);
+            }
+        }
     });
 
-    it('matches names with different casing (e.g. uppercase attendance vs mixed-case votes)', () => {
-        const result = inferForVotes(
-            ['ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ', 'ΓΕΩΡΓΙΟΥ ΜΑΡΙΑ'],
-            'Κατά πλειοψηφία',
-            [{ name: 'Παπαδόπουλος Ιωάννης', vote: 'AGAINST' }],
-        );
-        // Παπαδόπουλος already voted AGAINST — should NOT get an inferred FOR
-        expect(result.inferredCount).toBe(1);
-        expect(result.voteDetails).toEqual([
-            { name: 'Παπαδόπουλος Ιωάννης', vote: 'AGAINST' },
-            { name: 'ΓΕΩΡΓΙΟΥ ΜΑΡΙΑ', vote: 'FOR' },
-        ]);
-    });
-
-    it('matches names with different accents/diacritics', () => {
-        const result = inferForVotes(
-            ['Παπαδοπουλος Ιωαννης'],  // no accents
-            'Κατά πλειοψηφία',
-            [{ name: 'Παπαδόπουλος Ιωάννης', vote: 'ABSTAIN' }],  // with accents
-        );
-        expect(result.inferredCount).toBe(0);
-        expect(result.voteDetails).toHaveLength(1);
+    it('still fills the fields a reading written before they existed has no answer for', () => {
+        const bare = { attendanceChanges: [] } as unknown as RawExtractedDecision;
+        expect(withDefaults(bare)).toMatchObject({
+            attendanceFormat: 'explicit_present_absent',
+            compositionMembers: null,
+            presidedBy: null,
+            voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
+            decisionAttendance: null,
+        });
     });
 });
 
@@ -479,11 +531,33 @@ describe('extractDecisionFromPdf', () => {
 
         const { result, usage } = await extractDecisionFromPdf('https://example.com/test-unique-extraction-url.pdf');
 
-        expect(result).toEqual(mockResult);
+        expect(result).toMatchObject({ ...mockResult, attendanceChanges: [], presidedBy: null });
         expect(usage).toEqual({ input_tokens: 100, output_tokens: 50 });
         expect(mockAiChat).toHaveBeenCalledOnce();
         expect(fetchSpy).toHaveBeenCalledWith('https://example.com/test-unique-extraction-url.pdf');
 
+        fetchSpy.mockRestore();
+    });
+
+    it('turns the model\'s anchor into the change and its agenda-item projection', async () => {
+        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(10)) } as Response);
+        mockAiChat.mockResolvedValueOnce({
+            result: {
+                attendanceFormat: 'explicit_present_absent', compositionMembers: null, presentMembers: ['Λυδία Βέρα'], absentMembers: [],
+                mayorPresent: null, decisionExcerpt: 'x', decisionNumber: '304', references: '', voteResult: 'Ομόφωνα', voteDetails: [],
+                attendanceChanges: [
+                    { name: 'Λυδία Βέρα', type: 'departure', rawText: 'απεχώρησαν στην 286 ΑΚΣ',
+                      anchor: { kind: 'decision_number', agendaItemIndex: 0, outOfAgenda: false, decisionNumber: '286', phase: 'none', timing: 'during' } },
+                    { name: 'Π. Ζορμπά', type: 'departure', rawText: 'Πριν τη συζήτηση του 5ου θέματος',
+                      anchor: { kind: 'agenda_item', agendaItemIndex: 5, outOfAgenda: false, decisionNumber: '', phase: 'none', timing: 'before' } },
+                ],
+                discussionOrder: null, subjectInfo: null, incomplete: false,
+            },
+            usage: { input_tokens: 1, output_tokens: 1 },
+        });
+        const { result } = await extractDecisionFromPdf('https://example.com/anchors.pdf');
+        expect(result.attendanceChanges[0]).toMatchObject({ agendaItem: null, timing: null, anchor: { kind: 'decision_number', decisionNumber: '286', timing: 'during' } });
+        expect(result.attendanceChanges[1]).toMatchObject({ agendaItem: { agendaItemIndex: 5, nonAgendaReason: null }, timing: 'during', anchor: { kind: 'agenda_item', timing: 'before' } });
         fetchSpy.mockRestore();
     });
 
@@ -518,6 +592,98 @@ describe('extractDecisionFromPdf', () => {
         expect(mockAiChat.mock.calls[0][0].documentBase64).toBeDefined();
         expect(mockAiChat.mock.calls[0][0].systemPrompt).toContain('ΠΑΡΟΝΤΕΣ');
 
+        fetchSpy.mockRestore();
+    });
+
+    const partial = (over: Record<string, unknown>) => ({
+        result: { presentMembers: ['Μέλος 1'], absentMembers: [], decisionExcerpt: '', decisionNumber: null,
+                  references: '', voteResult: null, voteDetails: [], attendanceChanges: [], incomplete: true, ...over },
+        usage: { input_tokens: 10, output_tokens: 5 },
+    });
+    const mockFetch = () => vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+    } as Response);
+
+    it('reads the pages between the front slice and the end of a 17-page document', async () => {
+        mockGetPageCount.mockReturnValue(17);
+        const fetchSpy = mockFetch();
+        mockAiChat
+            .mockResolvedValueOnce(partial({}))   // pages 1-5
+            .mockResolvedValueOnce(partial({}))   // pages 1-10
+            .mockResolvedValueOnce(partial({}))   // pages 1-15
+            .mockResolvedValueOnce(partial({ decisionExcerpt: 'Αποφασίζει με 16 θετικές ψήφους', voteResult: 'Με δεκαέξι (16) θετικές ψήφους', incomplete: false }));
+
+        const { result } = await extractDecisionFromPdf('https://example.com/seventeen-pages.pdf');
+
+        expect(mockAiChat).toHaveBeenCalledTimes(4);
+        expect(mockAiChat.mock.calls[3][0].userPrompt).toContain('pages 16-17 of a 17-page document');
+        expect(result.voteResult).toBe('Με δεκαέξι (16) θετικές ψήφους');
+        expect(result.presentMembers).toEqual(['Μέλος 1']); // attendance kept from the front pages
+        expect(result.incomplete).toBe(false);
+        fetchSpy.mockRestore();
+    });
+
+    it('keeps the preamble facts from the front read when the decision comes from the tail', async () => {
+        mockGetPageCount.mockReturnValue(17);
+        const fetchSpy = mockFetch();
+        const frontPass = {
+            result: {
+                attendanceFormat: 'composition_and_absent', compositionMembers: ['Μέλος 1', 'Μέλος 2'],
+                presentMembers: null, absentMembers: [], mayorPresent: null,
+                presidedBy: { name: 'Αντιπρόεδρος Α', rawText: 'Προήδρευσε ο Αντιπρόεδρος Α' },
+                decisionAttendance: { present: [], rawText: '' },
+                voteTally: { FOR: -1, AGAINST: -1, ABSTAIN: -1, PRESENT: -1, DID_NOT_VOTE: -1 },
+                decisionExcerpt: '', decisionNumber: null, references: '', voteResult: null,
+                voteDetails: [], attendanceChanges: [], discussionOrder: null, subjectInfo: null, incomplete: true,
+            },
+            usage: { input_tokens: 10, output_tokens: 5 },
+        };
+        const tailPass = {
+            result: {
+                // The tail window prints no roll call and no presiding sentence.
+                attendanceFormat: 'explicit_present_absent', compositionMembers: null,
+                presentMembers: [], absentMembers: [], mayorPresent: null,
+                presidedBy: { name: '', rawText: '' },
+                decisionAttendance: { present: ['Μέλος 1'], rawText: 'ΤΑ ΜΕΛΗ: Μέλος 1' },
+                voteTally: { FOR: 16, AGAINST: 2, ABSTAIN: -1, PRESENT: -1, DID_NOT_VOTE: -1 },
+                decisionExcerpt: 'ΑΠΟΦΑΣΙΖΕΙ κατά πλειοψηφία', decisionNumber: '42/2025', references: '',
+                voteResult: 'Κατά πλειοψηφία', voteDetails: [], attendanceChanges: [],
+                discussionOrder: null, subjectInfo: null, incomplete: false,
+            },
+            usage: { input_tokens: 10, output_tokens: 5 },
+        };
+        mockAiChat
+            .mockResolvedValueOnce(frontPass)   // pages 1-5
+            .mockResolvedValueOnce(frontPass)   // pages 1-10
+            .mockResolvedValueOnce(frontPass)   // pages 1-15
+            .mockResolvedValueOnce(tailPass);   // pages 16-17
+
+        const { result } = await extractDecisionFromPdf('https://example.com/tail-merge-preamble.pdf');
+
+        // Preamble facts: whatever the front read saw.
+        expect(result.attendanceFormat).toBe('composition_and_absent');
+        expect(result.compositionMembers).toEqual(['Μέλος 1', 'Μέλος 2']);
+        expect(result.presidedBy).toEqual({ name: 'Αντιπρόεδρος Α', rawText: 'Προήδρευσε ο Αντιπρόεδρος Α' });
+        expect(result.presentMembers).toEqual(['Μέλος 1', 'Μέλος 2']);
+        // Decision facts: whatever the tail read saw.
+        expect(result.voteTally).toMatchObject({ FOR: 16, AGAINST: 2, ABSTAIN: null });
+        expect(result.decisionAttendance).toEqual({ present: ['Μέλος 1'], rawText: 'ΤΑ ΜΕΛΗ: Μέλος 1' });
+        expect(result.decisionNumber).toBe('42/2025');
+        fetchSpy.mockRestore();
+        mockGetPageCount.mockReturnValue(3);
+    });
+
+    it('does not accept a pass that claims completion with an empty excerpt', async () => {
+        mockGetPageCount.mockReturnValue(20);
+        const fetchSpy = mockFetch();
+        mockAiChat
+            .mockResolvedValueOnce(partial({ incomplete: false }))   // pages 1-5: "complete", no text
+            .mockResolvedValueOnce(partial({ incomplete: false, decisionExcerpt: 'Αποφασίζει ομόφωνα', voteResult: 'Ομόφωνα' }));
+
+        const { result } = await extractDecisionFromPdf('https://example.com/false-complete.pdf');
+
+        expect(mockAiChat).toHaveBeenCalledTimes(2);
+        expect(result.decisionExcerpt).toBe('Αποφασίζει ομόφωνα');
         fetchSpy.mockRestore();
     });
 
@@ -570,5 +736,44 @@ describe('extractDecisionFromPdf', () => {
 
         fetchSpy.mockRestore();
         mockGetPageCount.mockReturnValue(3); // Reset
+    });
+});
+
+describe('adoptLaterVoteNames', () => {
+    const base = { attendanceFormat: 'explicit_present_absent' as const, compositionMembers: null, presentMembers: [], absentMembers: [], mayorPresent: null, decisionExcerpt: 'x',
+        decisionNumber: null, references: '', attendanceChanges: [], discussionOrder: null, subjectInfo: null, incomplete: false, presidedBy: null, decisionAttendance: null };
+    const tally = (FOR: number | null) => ({ FOR, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null });
+    const names = (n: number, vote: 'FOR' | 'PRESENT') => Array.from({ length: n }, (_, i) => ({ name: `${vote} ${i}`, vote }));
+    it('adopts the names of a later window whose ΥΠΕΡ count equals the printed one', () => {
+        const winner = { ...base, voteResult: 'Με δεκαεννέα (19) θετικές ψήφους', voteTally: tally(19), voteDetails: [] };
+        const later = { ...base, voteResult: null, voteTally: tally(null), voteDetails: [...names(19, 'FOR'), ...names(8, 'PRESENT')] };
+        expect(adoptLaterVoteNames(winner, [later]).voteDetails).toHaveLength(27);
+    });
+    it('leaves an embedded decision of another body alone', () => {
+        const winner = { ...base, voteResult: 'Με δεκαεννέα (19) θετικές ψήφους', voteTally: tally(19), voteDetails: [] };
+        const committee = { ...base, voteResult: 'Με πέντε (5) θετικές ψήφους', voteTally: tally(5), voteDetails: [...names(5, 'FOR'), ...names(2, 'PRESENT')] };
+        expect(adoptLaterVoteNames(winner, [committee])).toBe(winner);
+    });
+    it('does nothing when the decision window already names voters or printed no count', () => {
+        const named = { ...base, voteResult: 'Ομόφωνα', voteTally: tally(null), voteDetails: names(3, 'FOR') };
+        expect(adoptLaterVoteNames(named, [{ ...base, voteResult: null, voteTally: tally(null), voteDetails: names(3, 'FOR') }])).toBe(named);
+    });
+});
+
+
+describe('normalizeGreekName, Latin homoglyphs', () => {
+    // «Αγρoγιάννη-Μουκριώτου» is printed with a Latin o in the roll call of
+    // ΡΟΨΘΩ6Μ-2Υ8 and with a Greek omicron elsewhere on the same page.
+    it('folds a Latin o inside a Greek word', () => {
+        expect(normalizeGreekName('Αγρoγιάννη-Μουκριώτου')).toBe(normalizeGreekName('Αγρογιάννη-Μουκριώτου'));
+    });
+
+    it('matches a person whose name a document spells with a homoglyph', () => {
+        const people = [{ id: 'p1', name: 'Ζαχαρία Αγρογιάννη-Μουκριώτου' }];
+        expect(matchMembersToPersonIds(['Αγρoγιάννη-Μουκριώτου Ζαχαρία'], people).matchedIds).toEqual(['p1']);
+    });
+
+    it('leaves a name with no homoglyphs alone', () => {
+        expect(normalizeGreekName('Γεώργιος Βουλγαράκης')).toBe('γεωργιος βουλγαρακης');
     });
 });

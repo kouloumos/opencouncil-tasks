@@ -28,8 +28,7 @@ vi.mock("../lib/ai.js", () => ({
 vi.mock("./utils/extractionPipeline.js", () => ({
     extractDecisionsFromPdfs: vi.fn(async () => ({
         decisions: [], warnings: [], usage: NO_USAGE_MOCK,
-        initialAttendance: [], unmatchedInitialAttendance: [],
-        nonDecisionSubjectAttendance: [], allSubjectAttendance: [],
+        initialAttendance: [], unmatchedInitialAttendance: [], attendanceEvents: [],
     })),
 }));
 
@@ -368,8 +367,12 @@ describe("pollDecisions - subjectInfo warnings", () => {
                 subjectId: "subA",
                 excerpt: "test",
                 references: "",
-                presentMemberIds: [],
-                absentMemberIds: [],
+                incomplete: false,
+                rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] },
+                mayorPresent: null,
+                presidedBy: null, decisionAttendance: null,
+                attendanceChanges: [],
+                voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                 voteResult: null,
                 voteDetails: [],
                 unmatchedMembers: [],
@@ -380,8 +383,7 @@ describe("pollDecisions - subjectInfo warnings", () => {
             usage: noUsage,
             initialAttendance: [],
             unmatchedInitialAttendance: [],
-            nonDecisionSubjectAttendance: [],
-            allSubjectAttendance: [],
+            attendanceEvents: [],
         });
 
         const result = await pollDecisions(
@@ -426,8 +428,12 @@ describe("pollDecisions - subjectInfo warnings", () => {
                 subjectId: "subA",
                 excerpt: "test",
                 references: "",
-                presentMemberIds: [],
-                absentMemberIds: [],
+                incomplete: false,
+                rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] },
+                mayorPresent: null,
+                presidedBy: null, decisionAttendance: null,
+                attendanceChanges: [],
+                voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                 voteResult: null,
                 voteDetails: [],
                 unmatchedMembers: [],
@@ -438,8 +444,7 @@ describe("pollDecisions - subjectInfo warnings", () => {
             usage: noUsage,
             initialAttendance: [],
             unmatchedInitialAttendance: [],
-            nonDecisionSubjectAttendance: [],
-            allSubjectAttendance: [],
+            attendanceEvents: [],
         });
 
         const result = await pollDecisions(
@@ -480,8 +485,12 @@ describe("pollDecisions - subjectInfo warnings", () => {
                 subjectId: "subA",
                 excerpt: "test",
                 references: "",
-                presentMemberIds: [],
-                absentMemberIds: [],
+                incomplete: false,
+                rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] },
+                mayorPresent: null,
+                presidedBy: null, decisionAttendance: null,
+                attendanceChanges: [],
+                voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                 voteResult: null,
                 voteDetails: [],
                 unmatchedMembers: [],
@@ -492,8 +501,7 @@ describe("pollDecisions - subjectInfo warnings", () => {
             usage: noUsage,
             initialAttendance: [],
             unmatchedInitialAttendance: [],
-            nonDecisionSubjectAttendance: [],
-            allSubjectAttendance: [],
+            attendanceEvents: [],
         });
 
         const result = await pollDecisions(
@@ -535,8 +543,12 @@ describe("pollDecisions - subjectInfo warnings", () => {
                 subjectId: "subA",
                 excerpt: "test",
                 references: "",
-                presentMemberIds: [],
-                absentMemberIds: [],
+                incomplete: false,
+                rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] },
+                mayorPresent: null,
+                presidedBy: null, decisionAttendance: null,
+                attendanceChanges: [],
+                voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                 voteResult: null,
                 voteDetails: [],
                 unmatchedMembers: [],
@@ -547,8 +559,7 @@ describe("pollDecisions - subjectInfo warnings", () => {
             usage: noUsage,
             initialAttendance: [],
             unmatchedInitialAttendance: [],
-            nonDecisionSubjectAttendance: [],
-            allSubjectAttendance: [],
+            attendanceEvents: [],
         });
 
         const result = await pollDecisions(
@@ -590,8 +601,12 @@ describe("pollDecisions - subjectInfo warnings", () => {
                 subjectId: "subA",
                 excerpt: "test",
                 references: "",
-                presentMemberIds: [],
-                absentMemberIds: [],
+                incomplete: false,
+                rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] },
+                mayorPresent: null,
+                presidedBy: null, decisionAttendance: null,
+                attendanceChanges: [],
+                voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                 voteResult: null,
                 voteDetails: [],
                 unmatchedMembers: [],
@@ -602,8 +617,7 @@ describe("pollDecisions - subjectInfo warnings", () => {
             usage: noUsage,
             initialAttendance: [],
             unmatchedInitialAttendance: [],
-            nonDecisionSubjectAttendance: [],
-            allSubjectAttendance: [],
+            attendanceEvents: [],
         });
 
         const result = await pollDecisions(
@@ -649,19 +663,22 @@ describe("pollDecisions - subjectInfo warnings", () => {
             decisions: [
                 {
                     subjectId: "sub6", excerpt: "", references: "",
-                    presentMemberIds: [], absentMemberIds: [],
+                    incomplete: false, rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] }, mayorPresent: null, presidedBy: null, decisionAttendance: null, attendanceChanges: [],
+                    voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                     voteResult: null, voteDetails: [], unmatchedMembers: [],
                     subjectInfo: { number: 7, isOutOfAgenda: false }, warnings: [],
                 },
                 {
                     subjectId: "sub7", excerpt: "", references: "",
-                    presentMemberIds: [], absentMemberIds: [],
+                    incomplete: false, rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] }, mayorPresent: null, presidedBy: null, decisionAttendance: null, attendanceChanges: [],
+                    voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                     voteResult: null, voteDetails: [], unmatchedMembers: [],
                     subjectInfo: { number: 8, isOutOfAgenda: false }, warnings: [],
                 },
                 {
                     subjectId: "sub8", excerpt: "", references: "",
-                    presentMemberIds: [], absentMemberIds: [],
+                    incomplete: false, rollCall: { layout: 'present_and_absent' as const, composition: [], present: [], absent: [], presentIds: [], absentIds: [] }, mayorPresent: null, presidedBy: null, decisionAttendance: null, attendanceChanges: [],
+                    voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
                     voteResult: null, voteDetails: [], unmatchedMembers: [],
                     subjectInfo: { number: 9, isOutOfAgenda: false }, warnings: [],
                 },
@@ -670,8 +687,7 @@ describe("pollDecisions - subjectInfo warnings", () => {
             usage: noUsage,
             initialAttendance: [],
             unmatchedInitialAttendance: [],
-            nonDecisionSubjectAttendance: [],
-            allSubjectAttendance: [],
+            attendanceEvents: [],
         });
 
         const result = await pollDecisions(

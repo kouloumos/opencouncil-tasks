@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { aiChat, ResultWithUsage, NO_USAGE, addUsage, HAIKU_MODEL } from '../../lib/ai.js';
+import type { DecisionConventions } from '../../types.js';
 import { PDFDocument } from 'pdf-lib';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -38,25 +39,10 @@ export async function downloadPdfToBase64(source: string): Promise<string> {
     return buffer.toString('base64');
 }
 
-/**
- * Extract a range of pages from a PDF buffer and return as base64.
- * Pages are 0-indexed: extractPages(buf, 0, 5) → first 5 pages.
- */
-export async function extractPdfPages(pdfBuffer: Buffer, startPage: number, endPage: number): Promise<string> {
-    const srcDoc = await PDFDocument.load(pdfBuffer);
-    const totalPages = srcDoc.getPageCount();
-    const actualEnd = Math.min(endPage, totalPages);
-
-    const newDoc = await PDFDocument.create();
-    const pageIndices = Array.from({ length: actualEnd - startPage }, (_, i) => startPage + i);
-    const copiedPages = await newDoc.copyPages(srcDoc, pageIndices);
-    for (const page of copiedPages) {
-        newDoc.addPage(page);
-    }
-
-    const pdfBytes = await newDoc.save();
-    return Buffer.from(pdfBytes).toString('base64');
-}
+// PDF page selection lives in pdfPages.ts; imported for use below and
+// re-exported so existing callers keep importing it from here.
+import { extractPdfPages, extractPdfPageSet, headAndTailPages } from './pdfPages.js';
+export { extractPdfPages, extractPdfPageSet, headAndTailPages };
 
 // --- Extraction cache ---
 // Caches Claude extraction results per PDF URL to avoid re-downloading and re-processing
@@ -96,12 +82,37 @@ export type AgendaItemRef = {
     nonAgendaReason: 'outOfAgenda' | null;  // null = regular agenda item
 };
 
+/** What a document pins an attendance change to. Only agenda_item resolves to a subject directly. */
+export type AttendanceAnchorKind =
+    | 'agenda_item' | 'decision_number' | 'phase' | 'this_document' | 'session_start' | 'session_end';
+
+export type AttendancePhase = 'pre_agenda' | 'out_of_agenda';
+
+export interface AttendanceAnchor {
+    kind: AttendanceAnchorKind;
+    agendaItem: AgendaItemRef | null;      // when kind is agenda_item
+    decisionNumber: string | null;         // when kind is decision_number, e.g. "286"
+    phase: AttendancePhase | null;         // when kind is phase: the block the page names
+    timing: 'before' | 'during' | 'after' | null;
+}
+
 export interface AttendanceChange {
     name: string;
-    type: 'arrival' | 'departure';
-    agendaItem: AgendaItemRef | null;      // null = session-level (start/end)
+    /** absent_for_vote: «Κατά τη διαδικασία της ψηφοφορίας απουσίαζε…» — scoped to this document's decision only. */
+    type: 'arrival' | 'departure' | 'absent_for_vote';
+    agendaItem: AgendaItemRef | null;      // null = session-level (start/end) or anchored elsewhere
     timing: 'during' | 'after' | null;     // null when agendaItem is null
+    /** Absent on cached extractions from before anchors existed; readers must tolerate that. */
+    anchor?: AttendanceAnchor;
     rawText: string;
+}
+
+/** The anchor of a change, reconstructed for extractions cached before anchors existed. */
+export function changeAnchor(change: AttendanceChange): AttendanceAnchor {
+    if (change.anchor) return change.anchor;
+    if (change.type === 'absent_for_vote') return { kind: 'this_document', agendaItem: null, decisionNumber: null, phase: null, timing: null };
+    if (change.agendaItem) return { kind: 'agenda_item', agendaItem: change.agendaItem, decisionNumber: null, phase: null, timing: change.timing };
+    return { kind: change.type === 'arrival' ? 'session_start' : 'session_end', agendaItem: null, decisionNumber: null, phase: null, timing: null };
 }
 
 export type VoteValue = 'FOR' | 'AGAINST' | 'ABSTAIN' | 'PRESENT' | 'DID_NOT_VOTE';
@@ -125,10 +136,52 @@ interface RawLlmExtraction {
     references: string;
     voteResult: string | null;
     voteDetails: { name: string; vote: VoteValue }[];
-    attendanceChanges: AttendanceChange[];
+    attendanceChanges: LlmAttendanceChange[];
     discussionOrder: AgendaItemRef[] | null;
     subjectInfo: AgendaItemRef | null;
     incomplete: boolean;
+    /** Who presided in the mayor's or president's place; name "" when the page says nothing. */
+    presidedBy: { name: string; rawText: string };
+    /** The members listed as present for THIS decision after the decision text (ΤΑ ΜΕΛΗ); empty when the page prints no such list. */
+    decisionAttendance: { present: string[]; rawText: string };
+    /** Counts printed in the vote phrase; -1 for a value the page does not count. */
+    voteTally: Record<VoteValue, number>;
+}
+
+/**
+ * The change as the model returns it. Structured outputs cap the number of
+ * nullable parameters per schema, so "not applicable" is an empty string,
+ * a zero or "none" here and becomes null in normalizeExtraction.
+ */
+interface LlmAttendanceChange {
+    name: string;
+    type: 'arrival' | 'departure' | 'absent_for_vote';
+    anchor: {
+        kind: AttendanceAnchorKind;
+        agendaItemIndex: number;      // 0 when kind is not agenda_item
+        outOfAgenda: boolean;
+        decisionNumber: string;       // "" when not decision_number
+        phase: AttendancePhase | 'none';  // 'none' when kind is not phase
+        timing: 'before' | 'during' | 'after' | 'none';
+    };
+    rawText: string;
+}
+
+function fromLlmChange(c: LlmAttendanceChange): AttendanceChange {
+    const a = c.anchor;
+    const agendaItem: AgendaItemRef | null = a.kind === 'agenda_item' && a.agendaItemIndex > 0
+        ? { agendaItemIndex: a.agendaItemIndex, nonAgendaReason: a.outOfAgenda ? 'outOfAgenda' : null }
+        : null;
+    const anchor: AttendanceAnchor = {
+        kind: c.type === 'absent_for_vote' ? 'this_document' : a.kind,
+        agendaItem,
+        decisionNumber: a.kind === 'decision_number' && a.decisionNumber ? a.decisionNumber : null,
+        phase: a.kind === 'phase' && a.phase !== 'none' ? a.phase : null,
+        timing: a.timing === 'none' ? null : a.timing,
+    };
+    // «Πριν» means the member was not there for the item, which is what 'during' has always meant here.
+    const timing: 'during' | 'after' | null = agendaItem ? (anchor.timing === 'after' ? 'after' : 'during') : null;
+    return { name: c.name, type: c.type, agendaItem, timing, anchor, rawText: c.rawText };
 }
 
 /**
@@ -142,10 +195,9 @@ function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
 
     if (raw.attendanceFormat === 'composition_and_absent') {
         if (raw.compositionMembers && raw.compositionMembers.length > 0) {
-            // Compute present = composition - absent using normalizeGreekName for robust matching
-            // (handles diacritics/tonos, parenthetical nicknames, whitespace differences)
-            const absentNormalized = new Set(absentMembers.map(n => normalizeGreekName(n)));
-            presentMembers = raw.compositionMembers.filter(n => !absentNormalized.has(normalizeGreekName(n)));
+            // Compute present = composition - absent. Absentees are often printed
+            // abbreviated («Αθανασάκης Σ.») against a spelled-out composition.
+            presentMembers = raw.compositionMembers.filter(n => !greekNameInList(n, absentMembers));
         } else {
             console.warn('⚠ LLM returned attendanceFormat "composition_and_absent" but compositionMembers is empty — attendance may be incomplete');
             presentMembers = raw.presentMembers || [];
@@ -153,17 +205,32 @@ function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
     } else {
         presentMembers = raw.presentMembers || [];
     }
+    // Whatever the layout, a member the page lists as absent is not present:
+    // the model has been seen returning the whole ΣΥΝΘΕΣΗ as the present list.
+    presentMembers = presentMembers.filter(n => !greekNameInList(n, absentMembers));
+
+    // The anchor is the fact; agendaItem/timing are its agenda-item projection,
+    // kept for every reader that predates anchors.
+    const attendanceChanges = (raw.attendanceChanges || []).map(fromLlmChange);
+
+    const VOTE_VALUES: VoteValue[] = ['FOR', 'AGAINST', 'ABSTAIN', 'PRESENT', 'DID_NOT_VOTE'];
+    const voteTally = Object.fromEntries(VOTE_VALUES.map(k => [k, raw.voteTally?.[k] >= 0 ? raw.voteTally[k] : null])) as Record<VoteValue, number | null>;
 
     return {
+        attendanceFormat: raw.attendanceFormat,
+        compositionMembers: raw.compositionMembers,
         presentMembers,
         absentMembers,
         mayorPresent: raw.mayorPresent,
+        presidedBy: raw.presidedBy?.name ? raw.presidedBy : null,
+        voteTally,
+        decisionAttendance: raw.decisionAttendance?.present?.length ? raw.decisionAttendance : null,
         decisionExcerpt: raw.decisionExcerpt,
         decisionNumber: raw.decisionNumber,
         references: raw.references,
         voteResult: raw.voteResult,
         voteDetails: raw.voteDetails,
-        attendanceChanges: raw.attendanceChanges,
+        attendanceChanges,
         discussionOrder: raw.discussionOrder,
         subjectInfo: raw.subjectInfo,
         incomplete: raw.incomplete,
@@ -171,6 +238,9 @@ function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
 }
 
 export interface RawExtractedDecision {
+    /** The layout the page used and the composition it printed, when it printed one. */
+    attendanceFormat: 'composition_and_absent' | 'explicit_present_absent';
+    compositionMembers: string[] | null;
     presentMembers: string[];
     absentMembers: string[];
     mayorPresent: { present: boolean; rawText: string } | null;
@@ -180,49 +250,14 @@ export interface RawExtractedDecision {
     voteResult: string | null;
     voteDetails: { name: string; vote: VoteValue }[];
     attendanceChanges: AttendanceChange[];
+    /** Kept as a document fact, read only by the CLI — deliberately not on the wire. */
     discussionOrder: AgendaItemRef[] | null;
     subjectInfo: AgendaItemRef | null;
     incomplete: boolean;
-}
-
-/**
- * Infer FOR votes when the PDF doesn't list them explicitly.
- *
- * Two cases:
- * - **Unanimous** ("Ομόφωνα"): all present members voted FOR, no explicit details needed.
- * - **Majority** ("κατά πλειοψηφία"): only AGAINST/ABSTAIN voters are named;
- *   all present members not in voteDetails are implicitly FOR.
- *
- * Members with any explicit voteDetails entry — including PRESENT (Παρών)
- * and DID_NOT_VOTE (Αποχή) declarations — are not given inferred FOR votes,
- * since they're already in the explicit voter set.
- *
- * Pure function: returns a new voteDetails array (never mutates input) and the
- * number of inferred FOR votes.
- */
-export function inferForVotes(
-    presentMembers: string[],
-    voteResult: string | null,
-    voteDetails: { name: string; vote: VoteValue }[],
-): { voteDetails: { name: string; vote: VoteValue }[]; inferredCount: number } {
-    const isUnanimous = voteResult && /[οό]μ[οό]φων/i.test(voteResult);
-    const isMajority = voteResult && /κατ[άα]\s+πλειοψηφ[ίι]/i.test(voteResult);
-    const hasNoForVotes = (voteDetails || []).every(v => v.vote !== 'FOR');
-
-    if ((!isUnanimous && !isMajority) || !hasNoForVotes || presentMembers.length === 0) {
-        return { voteDetails: [...(voteDetails || [])], inferredCount: 0 };
-    }
-
-    const explicitVoterNormalized = new Set(voteDetails.map(v => normalizeGreekName(v.name)));
-    const result = [...voteDetails];
-    let inferredCount = 0;
-    for (const name of presentMembers) {
-        if (!explicitVoterNormalized.has(normalizeGreekName(name))) {
-            result.push({ name, vote: 'FOR' });
-            inferredCount++;
-        }
-    }
-    return { voteDetails: result, inferredCount };
+    presidedBy: { name: string; rawText: string } | null;
+    voteTally: Record<VoteValue, number | null>;
+    /** The page's own list of who was present for this decision (ΤΑ ΜΕΛΗ / ΑΠΟΧΩΡΗΣΑΝΤΕΣ after the decision), never the opening roll call. */
+    decisionAttendance: { present: string[]; rawText: string } | null;
 }
 
 // --- PDF parsing with Claude ---
@@ -233,7 +268,8 @@ Extract the following information from the PDF:
 
 1. **attendanceFormat**: How attendance is structured in this PDF. One of:
    - "composition_and_absent" — The PDF has a "ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ" section listing ALL council members, followed by a separate "απουσίαζαν" / "ΑΠΟΝΤΕΣ" section listing absent members.
-   - "explicit_present_absent" — The PDF has separate "Παρόντες" / "ΠΑΡΟΝΤΕΣ" and "Απόντες" / "ΑΠΟΝΤΕΣ" lists.
+   - "explicit_present_absent" — The PDF has separate "Παρόντες" / "ΠΑΡΟΝΤΕΣ" and "Απόντες" / "ΑΠΟΝΤΕΣ" lists, OR a sentence naming who was present ("Παρόντες κατά την έναρξη της συνεδρίασης ήταν …"). A sentence that names the present members wins over any roster printed above it: use "explicit_present_absent" and copy exactly the names it gives.
+   A committee roster split into "ΤΑΚΤΙΚΑ" and "ΑΝΑΠΛΗΡΩΜΑΤΙΚΑ" (regular and substitute members) is NOT an attendance list: substitutes are present only when the document names them as present (e.g. "ΠΟΛΙΤΗΣ ΘΩΜΑΣ (αναπλ. μέλος)"). Never count the ΑΝΑΠΛΗΡΩΜΑΤΙΚΑ list into compositionMembers.
 2. **compositionMembers**: When attendanceFormat is "composition_and_absent", extract ALL names from the ΣΥΝΘΕΣΗ ΔΗΜΟΤΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ section — this is the complete council membership. Set to null when attendanceFormat is "explicit_present_absent".
 3. **presentMembers**: When attendanceFormat is "explicit_present_absent", extract names from the ΠΑΡΟΝΤΕΣ list. Set to null when attendanceFormat is "composition_and_absent".
 4. **absentMembers**: Names from the ΑΠΟΝΤΕΣ / "απουσίαζαν" section. Always extract this regardless of format. Do NOT remove someone from this list just because they arrived later (Προσελεύσεις) — that information goes in attendanceChanges.
@@ -241,26 +277,24 @@ Extract the following information from the PDF:
 6. **decisionNumber**: The decision number (Αριθμός Απόφασης), e.g. "231/2025".
 7. **references**: The legal bases and references from the "αφού έλαβε υπόψη" or "Έχοντας υπόψη" section. List each reference item. Use markdown formatting (numbered list). If the section just says something generic like "τις σχετικές διατάξεις της Νομοθεσίας", return that text as-is.
 8. **voteResult**: The vote result phrase, e.g. "Ομόφωνα", "Κατά πλειοψηφία", "Κατά πλειοψηφία με ψήφους 21 υπέρ και 2 κατά". This is usually found right before or after "ΑΠΟΦΑΣΙΖΕΙ".
-9. **voteDetails**: When the PDF names specific people who voted differently (against or abstained) or made declarations (present/non-participation), list them. For unanimous decisions, return an empty array. Each entry has "name" (full name) and "vote":
+9. **voteDetails**: Every person the PDF names with a vote or a declaration. Usually that is only dissenters and declarations; when the page lists those in favour by name ("ΥΠΕΡ ψήφισαν …", "Οι κάτωθι Δημοτικοί Σύμβουλοι έδωσαν θετική ψήφο: …"), list every one of them as FOR too. Never invent a FOR entry for someone the page does not name. For a unanimous decision that names nobody, return an empty array. Each entry has "name" (full name) and "vote":
    - "FOR" (ΥΠΕΡ) — voted in favor
    - "AGAINST" (ΚΑΤΑ) — voted against
    - "ABSTAIN" (ΛΕΥΚΟ) — blank vote, no position taken (still a vote)
    - "PRESENT" (ΠΑΡΩΝ/ΠΑΡΟΥΣΑ) — declared physical presence but did not participate in the vote (declaration, not a vote)
    - "DID_NOT_VOTE" (ΑΠΟΧΗ) — declined to participate (declaration, not a vote)
-10. **attendanceChanges**: Extract from "Προσελεύσεις – Αποχωρήσεις" or separate "Προσελεύσεις" / "Αποχωρήσεις" sections. These describe members who arrived late or left early. For each person, extract:
-   - "name": full name
-   - "type": "arrival" or "departure"
-   - "agendaItem": The agenda item during/after which this change occurred. Use an object with:
-     - "agendaItemIndex": the item number (e.g., "κατά τη συζήτηση του 3ου θέματος" → 3, "μετά το 1ο έκτακτο θέμα" → 1)
-     - "nonAgendaReason": "outOfAgenda" if the item is explicitly an out-of-agenda/emergency item (ΕΚΤΑΚΤΟ ΘΕΜΑ, ΘΕΜΑ ΕΚΤΟΣ Η.Δ.), otherwise null
-     Set "agendaItem" to null if no specific item is mentioned (person arrived at session start or left at session end).
-   - "timing": The temporal relationship to the agenda item:
-     - "during" if the change happened DURING or BEFORE the item discussion (e.g., "κατά τη διάρκεια του 9ου θέματος", "κατά τη συζήτηση του 3ου θέματος", "πριν τη συζήτηση του 1ου θέματος", "πριν το 4ο θέμα"). Use "during" for BOTH "κατά" and "πριν" — both mean the person was absent from that item onward.
-     - "after" if the change happened AFTER the item ENDED (e.g., "μετά τη λήξη της συζήτησης του 9ου θέματος", "μετά το 5ο θέμα"). Use "after" ONLY for "μετά" — it means the person was present and voted on that item, then left.
-     Set to null when "agendaItem" is null (session-level changes).
-     The distinction matters: "after item 9" means the person was present for item 9, while "during item 9" or "before item 9" means they were absent from item 9 onward.
-   - "rawText": the original sentence describing this change.
-   If no such section exists, return an empty array.
+10. **attendanceChanges**: Members who arrived late, left early, or were absent for this decision's vote. Look in "Προσελεύσεις – Αποχωρήσεις" sections, in the attendance preamble (e.g. "Ο κ. Χ απεχώρησε στην 286 ΑΚΣ", "προσήλθε κατά τη συζήτηση του 3ου θέματος"), and at the end of the document ("Κατά τη διαδικασία της ψηφοφορίας απουσίαζε ο κ. Χ"). Include the mayor when the page says the mayor arrived or left («Η Δήμαρχος … προσήλθε στη λήξη της συζήτησης του 8ου θέματος»), with the name as printed. For each person, extract:
+   - "name": full name as printed
+   - "type": "arrival", "departure", or "absent_for_vote" (the document says the member was absent for THIS decision's vote — «απουσίαζε κατά τη διαδικασία της ψηφοφορίας», «απουσίαζαν από την αίθουσα κατά την ψήφιση του θέματος»)
+   - "anchor": WHAT the document pins the change to. Copy the document; never convert one kind into another.
+     - "kind": "agenda_item" (a numbered item: "κατά τη συζήτηση του 3ου θέματος", "μετά το 1ο έκτακτο θέμα"); "decision_number" (a decision number: "στην 286 ΑΚΣ", "μετά την 230 απόφαση"); "phase" (a moment named without an item number: "pre_agenda" for anything before the agenda items — «πριν την έναρξη της ημερήσιας διάταξης», «κατά τις ερωτήσεις της προ ημερησίας», «μετά την ανάδειξη του Προεδρείου», «στην ανάγνωση των δια περιφοράς»; "out_of_agenda" for «κατά τη συζήτηση των θεμάτων εκτός ημερήσιας διάταξης»); "this_document" (for absent_for_vote); "session_start" / "session_end" (arrived at the start or left at the end, nothing more specific)
+     - "agendaItemIndex": the item number when kind is "agenda_item", else 0
+     - "outOfAgenda": true when that item is ΕΚΤΑΚΤΟ / ΕΚΤΟΣ Η.Δ., else false
+     - "decisionNumber": the number as printed (e.g. "286") when kind is "decision_number", else ""
+     - "phase": "pre_agenda" or "out_of_agenda" when kind is "phase", else "none". A printed clock time («ώρα 19:18») is never an anchor: use the item printed with it, or "session_start" when the sentence says only «κατά τη διάρκεια της συνεδρίασης».
+     - "timing": "before" ("πριν τη συζήτηση"), "during" ("κατά τη διάρκεια", "κατά τη συζήτηση", "στην 286 ΑΚΣ"), "after" ("μετά τη λήξη", "μετά το 5ο θέμα", "μετά την 230 ΑΚΣ"), or "none" when the kind carries no timing
+   - "rawText": the original sentence describing this change
+   If no such statements exist, return an empty array.
 11. **discussionOrder**: When subjects were discussed out of the standard agenda order (e.g. "Προτάθηκε η αλλαγή σειράς συζήτησης", items reordered, or out-of-agenda items inserted between regular items), extract the full discussion sequence including both regular and out-of-agenda/emergency items. Each entry is an object with:
    - "agendaItemIndex": the item number
    - "nonAgendaReason": "outOfAgenda" if the item is an out-of-agenda/emergency item (ΕΚΤΑΚΤΟ ΘΕΜΑ), otherwise null
@@ -269,9 +303,15 @@ Extract the following information from the PDF:
 12. **subjectInfo**: The agenda item this decision relates to:
    - "agendaItemIndex": The subject/topic number (e.g., "ΘΕΜΑ 3ο" → 3, "1ο ΕΚΤΑΚΤΟ ΘΕΜΑ" → 1, "ΘΕΜΑ ΕΚΤΟΣ Η.Δ. 2ο" → 2)
    - "nonAgendaReason": "outOfAgenda" if this is an out-of-agenda/emergency item (ΕΚΤΑΚΤΟ ΘΕΜΑ, ΘΕΜΑ ΕΚΤΟΣ Η.Δ., etc.), null for regular agenda items (ΘΕΜΑ Η.Δ., τακτικό θέμα)
-   - Return null if the subject/topic number cannot be determined.
+   - Return null if the subject/topic number cannot be determined. Return null when the page prints no item number for THIS decision; never infer one from position, from the decision number, or from a "1ο" in a heading that belongs to another item.
 13. **mayorPresent**: Whether the city mayor (Δήμαρχος/Δήμαρχο) was present at the session. This is usually stated in a narrative paragraph separate from the council member attendance list. Look for phrases like "Ο/Η Δήμαρχος ... προσκλήθηκε νομίμως και παρέστη" or "Ο/Η Δήμαρχος ... παρών/παρούσα" (present), or "Ο/Η Δήμαρχος ... δεν ήταν παρών/παρούσα" or "απουσίαζε" (absent). Return an object with "present" (boolean) and "rawText" (the original sentence from the PDF describing the mayor's presence/absence). Return null if mayor presence is not mentioned.
 14. **incomplete**: Set to true ONLY if the document appears physically truncated — i.e. you can see attendance lists and preamble but the decision section starting with "ΑΠΟΦΑΣΙΖΕΙ" is not present because the provided pages end before reaching it. Set to false if you can see the "ΑΠΟΦΑΣΙΖΕΙ" section, even if some fields within it (like the vote result phrase) are missing or unclear. Missing data in a complete document is a data quality issue, not truncation.
+
+15. **presidedBy**: When the page says someone presided in place of the mayor or the president («ο Αντιπρόεδρος κ. Χ, ο οποίος προήδρευσε λόγω της απουσίας της Δημάρχου», «προεδρεύοντος του Αντιδημάρχου κ. Χ»), return {"name": the full name as printed, "rawText": the sentence}. Otherwise {"name": "", "rawText": ""}.
+
+16. **voteTally**: The counts printed in the vote phrase, per value: FOR (υπέρ / θετικές ψήφοι), AGAINST (κατά / αρνητικές), ABSTAIN (λευκά), PRESENT (παρών), DID_NOT_VOTE (αποχή). Use -1 for every value the page does not count. «Κατά πλειοψηφία με 12 υπέρ και 3 κατά» → FOR 12, AGAINST 3, the rest -1. «Ομόφωνα» → all -1. Never count names yourself.
+
+17. **decisionAttendance**: Some bodies print, AFTER the decision text, the members present for THIS decision: a list headed ΤΑ ΜΕΛΗ / ΠΑΡΟΝΤΑ ΜΕΛΗ. Return {"present": the names in that list, "rawText": the heading and its first line}. A list of who had LEFT (ΑΠΟΧΩΡΗΣΑΝΤΕΣ) is not a present list: never put its names in "present". When the page prints no such list, return {"present": [], "rawText": ""}. Never copy the opening roll call (ΠΑΡΟΝΤΕΣ/ΣΥΝΘΕΣΗ at the top) here, and never remove anyone from presentMembers because of this list.
 
 If a field cannot be found, use empty array for lists, empty string for text, and null where indicated.`;
 // The output shape itself is not described here — it is enforced by
@@ -284,8 +324,29 @@ If a field cannot be found, use empty array for lists, empty string for text, an
  * Normalize a Greek name for matching: strip diacritics (tonos), remove
  * parenthetical nicknames like "(ΜΠΑΜΠΗΣ)", collapse whitespace, lowercase.
  */
+/**
+ * Latin letters that are indistinguishable from a Greek letter in the fonts
+ * these documents use, folded towards Greek.
+ *
+ * Municipal templates really do mix them: \u00ab\u0391\u03b3\u03c1o\u03b3\u03b9\u03ac\u03bd\u03bd\u03b7-\u039c\u03bf\u03c5\u03ba\u03c1\u03b9\u03ce\u03c4\u03bf\u03c5\u00bb carries a
+ * Latin o in the roll call of `\u03a1\u039f\u03a8\u0398\u03a96\u039c-2\u03a58` and a Greek omicron elsewhere on
+ * the same page. Without this, two spellings of one name compare unequal over
+ * a character nobody can see \u2014 the matcher drops the person, and the scorer
+ * reports a disagreement that flips between runs depending on which occurrence
+ * the model happened to read.
+ */
+const LATIN_TO_GREEK: Record<string, string> = {
+    A: '\u0391', B: '\u0392', E: '\u0395', Z: '\u0396', H: '\u0397', I: '\u0399', K: '\u039a', M: '\u039c',
+    N: '\u039d', O: '\u039f', P: '\u03a1', T: '\u03a4', X: '\u03a7', Y: '\u03a5',
+    a: '\u03b1', e: '\u03b5', i: '\u03b9', k: '\u03ba', o: '\u03bf', p: '\u03c1', t: '\u03c4', x: '\u03c7', y: '\u03c5', v: '\u03bd',
+};
+
+export function foldGreekHomoglyphs(s: string): string {
+    return s.replace(/[ABEZHIKMNOPTXYaeikoptxyv]/g, c => LATIN_TO_GREEK[c] ?? c);
+}
+
 export function normalizeGreekName(name: string): string {
-    return name
+    return foldGreekHomoglyphs(name)
         .replace(/\s*\([^)]*\)\s*/g, ' ')      // strip parenthetical nicknames
         .replace(/[\u2010-\u2015\u2212]/g, ' ')  // normalize Unicode dashes (en-dash, em-dash, etc.) to spaces; preserve ASCII hyphen-minus in compound surnames
         .normalize('NFD')                        // decompose accented chars
@@ -293,6 +354,47 @@ export function normalizeGreekName(name: string): string {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+/**
+ * Does `short` name the same person as `full`? Documents abbreviate members
+ * as «Αθανασάκης Σ.» or «Καρύδας Δ.-Ε.» while the composition and the roster
+ * spell them out. Every whole word of `short` must be a word of `full`, and
+ * every initial must open some remaining word of `full`.
+ */
+export function sameGreekPerson(short: string, full: string): boolean {
+    const a = normalizeGreekName(short);
+    const b = normalizeGreekName(full);
+    if (a === b) return true;
+    const words = (n: string) => n.split(/[\s-]+/).filter(Boolean);
+    const fullWords = words(b);
+    const initials: string[] = [];
+    const whole: string[] = [];
+    // «Ντ.» and «Μπ.» are one initial each, so a trailing dot marks an initial
+    // whatever its length; a bare single letter counts as one too.
+    for (const w of words(a)) {
+        if (w.endsWith('.')) initials.push(w.slice(0, -1));
+        else if (w.length === 1) initials.push(w);
+        else whole.push(w);
+    }
+    if (whole.length === 0) return false;
+    const remaining = [...fullWords];
+    for (const w of whole) {
+        const i = remaining.indexOf(w);
+        if (i < 0) return false;
+        remaining.splice(i, 1);
+    }
+    for (const ch of initials) {
+        const i = remaining.findIndex(w => w.startsWith(ch));
+        if (i < 0) return false;
+        remaining.splice(i, 1);
+    }
+    return true;
+}
+
+/** Is `name` listed in `list`, allowing abbreviated forms on either side? */
+export function greekNameInList(name: string, list: string[]): boolean {
+    return list.some(other => sameGreekPerson(name, other) || sameGreekPerson(other, name));
 }
 
 /**
@@ -374,7 +476,7 @@ export function matchMembersToPersonIds(
 
     for (const rawName of rawNames) {
         const keys = tokenSortKeys(rawName);
-        const personId = keys.map(k => lookup.get(k)).find(Boolean);
+        const personId = keys.map(k => lookup.get(k)).find(Boolean) ?? uniqueAbbreviatedMatch(rawName, people);
         if (personId) {
             matchedIds.push(personId);
         } else {
@@ -383,6 +485,16 @@ export function matchMembersToPersonIds(
     }
 
     return { matchedIds, unmatched };
+}
+
+/**
+ * «Αθανασάκης Σ.» or «Ευαγγελία Λίλιαν Γαζή» against a roster that spells
+ * names fully or without the middle name. Only a unique candidate counts:
+ * two Παπαδόπουλοι and an initial is a question for the model, not a match.
+ */
+function uniqueAbbreviatedMatch(rawName: string, people: PersonForMatching[]): string | null {
+    const candidates = people.filter(p => sameGreekPerson(rawName, p.name) || sameGreekPerson(p.name, rawName));
+    return candidates.length === 1 ? candidates[0].id : null;
 }
 
 /**
@@ -401,7 +513,7 @@ export function matchPersonByName(
             }
         }
     }
-    return null;
+    return uniqueAbbreviatedMatch(rawName, people);
 }
 
 // Structured-outputs schema for llmMatchMembers — replaces the '[' assistant
@@ -475,10 +587,17 @@ Rules:
     const matched: { name: string; personId: string }[] = [];
     const stillUnmatched: string[] = [];
     const usedIds = new Set<string>();
+    // The model copies ids as text and has been seen splicing two of them into
+    // one that exists nowhere; such a row would fail the foreign key downstream
+    // and take the whole subject's attendance with it.
+    const knownIds = new Set(availablePeople.map(p => p.id));
 
     for (const entry of result) {
         if (!entry || typeof entry.name !== 'string' || !entry.name) continue;
-        if (entry.personId && !usedIds.has(entry.personId)) {
+        if (entry.personId && !knownIds.has(entry.personId)) {
+            console.warn(`  LLM matcher returned an id not in the roster for "${entry.name}": ${entry.personId} — treating as unmatched`);
+        }
+        if (entry.personId && knownIds.has(entry.personId) && !usedIds.has(entry.personId)) {
             matched.push({ name: entry.name, personId: entry.personId });
             usedIds.add(entry.personId);
         } else {
@@ -593,24 +712,53 @@ const EXTRACTION_OUTPUT_SCHEMA = {
                 type: 'object',
                 properties: {
                     name: { type: 'string' },
-                    type: { type: 'string', enum: ['arrival', 'departure'] },
-                    agendaItem: { anyOf: [AGENDA_ITEM_REF_SCHEMA, { type: 'null' }] },
-                    timing: { anyOf: [{ type: 'string', enum: ['during', 'after'] }, { type: 'null' }] },
+                    type: { type: 'string', enum: ['arrival', 'departure', 'absent_for_vote'] },
+                    anchor: {
+                        type: 'object',
+                        properties: {
+                            kind: { type: 'string', enum: ['agenda_item', 'decision_number', 'phase', 'this_document', 'session_start', 'session_end'] },
+                            agendaItemIndex: { type: 'integer' },
+                            outOfAgenda: { type: 'boolean' },
+                            decisionNumber: { type: 'string' },
+                            phase: { type: 'string', enum: ['pre_agenda', 'out_of_agenda', 'none'] },
+                            timing: { type: 'string', enum: ['before', 'during', 'after', 'none'] },
+                        },
+                        required: ['kind', 'agendaItemIndex', 'outOfAgenda', 'decisionNumber', 'phase', 'timing'],
+                        additionalProperties: false,
+                    },
                     rawText: { type: 'string' },
                 },
-                required: ['name', 'type', 'agendaItem', 'timing', 'rawText'],
+                required: ['name', 'type', 'anchor', 'rawText'],
                 additionalProperties: false,
             },
         },
         discussionOrder: { anyOf: [{ type: 'array', items: AGENDA_ITEM_REF_SCHEMA }, { type: 'null' }] },
         subjectInfo: { anyOf: [AGENDA_ITEM_REF_SCHEMA, { type: 'null' }] },
         incomplete: { type: 'boolean' },
+        presidedBy: {
+            type: 'object',
+            properties: { name: { type: 'string' }, rawText: { type: 'string' } },
+            required: ['name', 'rawText'],
+            additionalProperties: false,
+        },
+        decisionAttendance: {
+            type: 'object',
+            properties: { present: { type: 'array', items: { type: 'string' } }, rawText: { type: 'string' } },
+            required: ['present', 'rawText'],
+            additionalProperties: false,
+        },
+        voteTally: {
+            type: 'object',
+            properties: { FOR: { type: 'integer' }, AGAINST: { type: 'integer' }, ABSTAIN: { type: 'integer' }, PRESENT: { type: 'integer' }, DID_NOT_VOTE: { type: 'integer' } },
+            required: ['FOR', 'AGAINST', 'ABSTAIN', 'PRESENT', 'DID_NOT_VOTE'],
+            additionalProperties: false,
+        },
     },
     required: [
         'attendanceFormat', 'compositionMembers', 'presentMembers', 'absentMembers',
         'mayorPresent', 'decisionExcerpt', 'decisionNumber', 'references',
         'voteResult', 'voteDetails', 'attendanceChanges', 'discussionOrder',
-        'subjectInfo', 'incomplete',
+        'subjectInfo', 'incomplete', 'presidedBy', 'voteTally', 'decisionAttendance',
     ],
     additionalProperties: false,
 };
@@ -630,10 +778,98 @@ const MAX_FRONT_PAGES = 15;
 /** Number of pages to try from the end of the document as a last resort. */
 const TAIL_PAGES = 5;
 
-export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string, skipCache?: boolean): Promise<ResultWithUsage<RawExtractedDecision> & { fromCache: boolean }> {
+/**
+ * A pass has reached the decision only when it says so AND carries text. Long
+ * Sparta documents embed earlier decisions in the preamble, and the model
+ * reports "complete" on those pages with an empty excerpt.
+ */
+function reachedTheDecision(result: RawExtractedDecision): boolean {
+    return !result.incomplete && (result.decisionExcerpt?.trim().length ?? 0) > 0;
+}
+
+/**
+ * A later window of a long document may hold the named vote lists the decision
+ * window did not (Vrilissia 8/12: ΑΠΟΦΑΣΙΖΕΙ on page 27, the nineteen ΥΠΕΡ and
+ * eight «παρών» names on page 37). They are adopted only when they are the same
+ * vote: the decision window names nobody in favour and printed a count that the
+ * candidate's named ΥΠΕΡ list matches exactly. An embedded decision of another
+ * body (its own count, its own names) never matches and is left where it is.
+ */
+export function adoptLaterVoteNames(winner: RawExtractedDecision, later: RawExtractedDecision[]): RawExtractedDecision {
+    const printedFor = winner.voteTally?.FOR ?? null;
+    const winnerNamesFor = winner.voteDetails.some(v => v.vote === 'FOR');
+    if (printedFor == null || winnerNamesFor) return winner;
+    for (const w of later) {
+        const namedFor = w.voteDetails.filter(v => v.vote === 'FOR').length;
+        const sameCount = w.voteTally?.FOR == null || w.voteTally.FOR === printedFor;
+        if (namedFor === printedFor && sameCount) return { ...winner, voteDetails: w.voteDetails };
+    }
+    return winner;
+}
+
+/** Did this pass read any count out of the vote phrase? */
+function hasCountedTally(tally: RawExtractedDecision['voteTally'] | undefined): boolean {
+    return !!tally && Object.values(tally).some(v => v !== null);
+}
+
+/**
+ * Bumped whenever the prompt or the output schema changes what a reading means,
+ * so a reading in the old shape is never served to code expecting the new one.
+ * v4 retired the `clock_time` and `session_phase` anchor kinds and the free-text
+ * `phase` that came with them.
+ */
+export const EXTRACTION_SCHEMA_VERSION = 4;
+
+/** The cache key. Hints change what comes back, so a hinted read is cached apart from a plain one. */
+export function extractionCacheKey(pdfUrl: string, hints?: string): string {
+    const versioned = `${pdfUrl}#v${EXTRACTION_SCHEMA_VERSION}`;
+    return hints ? `${versioned}#${crypto.createHash('sha256').update(hints).digest('hex').slice(0, 8)}` : versioned;
+}
+
+/** A phase as the retired `session_phase` anchor stated it: the block as the page printed it. */
+function phaseFromFreeText(raw: unknown): AttendancePhase | null {
+    if (raw === 'pre_agenda' || raw === 'out_of_agenda') return raw;
+    if (typeof raw !== 'string' || !raw.trim()) return null;
+    // «εκτός ημερησίας διατάξεως» / «Ε.Η.Δ.» name the out-of-agenda block; every
+    // other phrase the old prompt produced («προ ημερησίας», «μετά την ψήφιση
+    // του κατεπείγοντος») sits before the agenda proper.
+    const normalized = normalizeGreekName(raw);
+    return normalized.includes('εκτος ημερησ') || /(^|[^α-ω])ε\.?η\.?δ([^α-ω]|$)/.test(normalized) ? 'out_of_agenda' : 'pre_agenda';
+}
+
+/** The anchor as v4 declares it, from an anchor a pre-v4 reading stated. */
+function migrateAnchor(anchor: AttendanceAnchor): AttendanceAnchor {
+    const kind: string = anchor.kind;
+    if (kind === 'session_phase') return { ...anchor, kind: 'phase', phase: phaseFromFreeText(anchor.phase) };
+    if (kind === 'clock_time') return { ...anchor, kind: 'session_start', phase: null };
+    // A free-text phase can ride any kind; only the two enum values are on the wire.
+    if (anchor.phase !== null && anchor.phase !== 'pre_agenda' && anchor.phase !== 'out_of_agenda') return { ...anchor, phase: null };
+    return anchor;
+}
+
+/**
+ * The belt to the cache key's braces: entries written on this branch before a
+ * field existed are read as absent, and any anchor vocabulary predating v4 is
+ * migrated rather than passed onto the wire.
+ */
+export function withDefaults(raw: RawExtractedDecision): RawExtractedDecision {
+    const r = raw as Partial<RawExtractedDecision>;
+    return {
+        ...raw,
+        attendanceFormat: r.attendanceFormat ?? 'explicit_present_absent',
+        compositionMembers: r.compositionMembers ?? null,
+        presidedBy: r.presidedBy?.name ? r.presidedBy : null,
+        voteTally: r.voteTally ?? { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
+        decisionAttendance: r.decisionAttendance?.present?.length ? r.decisionAttendance : null,
+        attendanceChanges: (r.attendanceChanges ?? []).map(c => c.anchor ? { ...c, anchor: migrateAnchor(c.anchor) } : c),
+    };
+}
+
+export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string, skipCache?: boolean, hints?: string): Promise<ResultWithUsage<RawExtractedDecision> & { fromCache: boolean }> {
+    const cacheKey = extractionCacheKey(pdfUrl, hints);
     if (!skipCache) {
-        const cached = readCache<RawExtractedDecision>(pdfUrl);
-        if (cached) return { result: cached, usage: { ...NO_USAGE }, fromCache: true };
+        const cached = readCache<RawExtractedDecision>(cacheKey);
+        if (cached) return { result: withDefaults(cached), usage: { ...NO_USAGE }, fromCache: true };
     }
 
     const pdfBuffer = await downloadPdfAsBuffer(pdfUrl);
@@ -643,6 +879,9 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
     const userPromptParts = ['Extract the required information from this Greek municipal council decision PDF.'];
     if (mayorName) {
         userPromptParts.push(`The city mayor is: ${mayorName}`);
+    }
+    if (hints) {
+        userPromptParts.push(hints);
     }
     const userPrompt = userPromptParts.join('\n');
 
@@ -661,7 +900,7 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
         });
 
         const result = normalizeExtraction(raw);
-        writeCache(pdfUrl, result);
+        writeCache(cacheKey, result);
         return { result, usage, fromCache: false };
     }
 
@@ -695,29 +934,33 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
         const result = normalizeExtraction(raw);
         lastFrontResult = result;
 
-        if (!result.incomplete || actualPages >= totalPages) {
-            if (result.incomplete) {
-                console.log(`  Extraction still incomplete after all ${totalPages} pages`);
-            } else {
-                console.log(`  Extraction complete with ${actualPages} pages`);
-            }
-            writeCache(pdfUrl, result);
+        if (reachedTheDecision(result)) {
+            console.log(`  Extraction complete with ${actualPages} pages`);
+            writeCache(cacheKey, result);
             return { result, usage: totalUsage, fromCache: false };
+        }
+        if (actualPages >= totalPages) {
+            console.log(`  Extraction still incomplete after all ${totalPages} pages`);
+            const exhausted = { ...result, incomplete: true };
+            writeCache(cacheKey, exhausted);
+            return { result: exhausted, usage: totalUsage, fromCache: false };
         }
 
         console.log(`  Incomplete extraction — decision content not found in first ${actualPages} pages, retrying with more...`);
         pagesToSend += PAGE_INCREMENT;
     }
 
-    // Front pages exhausted — try the last TAIL_PAGES pages
-    const tailStart = Math.max(0, totalPages - TAIL_PAGES);
-    if (tailStart >= MAX_FRONT_PAGES) {
-        // Only try tail if it doesn't overlap with pages we already sent
-        const tailActual = totalPages - tailStart;
-        console.log(`  Front pages exhausted, trying last ${tailActual} pages (${tailStart + 1}-${totalPages})...`);
+    // Front pages exhausted — walk the unseen pages in windows from the end,
+    // because the decision sits at the end and the pages between the front
+    // slice and the tail are exactly where 16-19-page documents keep it.
+    let windowEnd = totalPages;
+    const laterWindows: RawExtractedDecision[] = [];
+    while (windowEnd > MAX_FRONT_PAGES) {
+        const windowStart = Math.max(MAX_FRONT_PAGES, windowEnd - TAIL_PAGES);
+        console.log(`  Front pages exhausted, trying pages ${windowStart + 1}-${windowEnd} of ${totalPages}...`);
 
-        const tailBase64 = await extractPdfPages(pdfBuffer, tailStart, totalPages);
-        const tailPrompt = `${userPrompt}\n\nNote: You are seeing the last ${tailActual} pages (${tailStart + 1}-${totalPages}) of a ${totalPages}-page document. The earlier pages contained attendance lists and preamble but not the decision section. Extract the decision information from these pages. If the decision section ("ΑΠΟΦΑΣΙΖΕΙ") is not visible in these pages either, set "incomplete" to true.`;
+        const tailBase64 = await extractPdfPages(pdfBuffer, windowStart, windowEnd);
+        const tailPrompt = `${userPrompt}\n\nNote: You are seeing pages ${windowStart + 1}-${windowEnd} of a ${totalPages}-page document. The earlier pages contained attendance lists and preamble but not the decision section. Extract the decision information from these pages. If the decision section ("ΑΠΟΦΑΣΙΖΕΙ") is not visible in these pages either, set "incomplete" to true.`;
 
         const { result: tailRaw, usage } = await aiChat<RawLlmExtraction>({
             systemPrompt: EXTRACTION_SYSTEM_PROMPT,
@@ -732,8 +975,12 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
         totalUsage = addUsage(totalUsage, usage);
         const tailResult = normalizeExtraction(tailRaw);
 
-        if (!tailResult.incomplete) {
-            // Merge: attendance + preamble from front pages, decision data from tail pages
+        if (reachedTheDecision(tailResult)) {
+            // Merge: attendance + preamble from front pages, decision data from tail pages.
+            // The tail window carries neither the roll call nor the presiding
+            // sentence, so every preamble fact falls back to the front read;
+            // the decision facts fall back the other way.
+            const tailSawRollCall = !!(tailResult.presentMembers?.length || tailResult.absentMembers?.length || tailResult.compositionMembers?.length);
             const merged: RawExtractedDecision = {
                 ...tailResult,
                 presentMembers: tailResult.presentMembers?.length ? tailResult.presentMembers : lastFrontResult!.presentMembers,
@@ -742,18 +989,27 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
                 mayorPresent: tailResult.mayorPresent ?? lastFrontResult!.mayorPresent,
                 discussionOrder: tailResult.discussionOrder ?? lastFrontResult!.discussionOrder,
                 subjectInfo: tailResult.subjectInfo ?? lastFrontResult!.subjectInfo,
+                attendanceFormat: tailSawRollCall ? tailResult.attendanceFormat : lastFrontResult!.attendanceFormat,
+                compositionMembers: tailSawRollCall ? tailResult.compositionMembers : lastFrontResult!.compositionMembers,
+                presidedBy: tailResult.presidedBy ?? lastFrontResult!.presidedBy,
+                voteTally: hasCountedTally(tailResult.voteTally) ? tailResult.voteTally : lastFrontResult!.voteTally,
+                decisionAttendance: tailResult.decisionAttendance ?? lastFrontResult!.decisionAttendance,
             };
-            console.log(`  Extraction complete from tail pages (merged with front-page attendance)`);
-            writeCache(pdfUrl, merged);
-            return { result: merged, usage: totalUsage, fromCache: false };
+            const withNames = adoptLaterVoteNames(merged, laterWindows);
+            if (withNames !== merged) console.log(`  Named votes adopted from a later window (${withNames.voteDetails.length} names match the printed count)`);
+            console.log(`  Extraction complete from pages ${windowStart + 1}-${windowEnd} (merged with front-page attendance)`);
+            writeCache(cacheKey, withNames);
+            return { result: withNames, usage: totalUsage, fromCache: false };
         }
-
-        console.log(`  Decision content not found in tail pages either`);
+        // Windows after the decision are kept: they may hold the vote's named lists.
+        laterWindows.push(tailResult);
+        console.log(`  Decision content not found in pages ${windowStart + 1}-${windowEnd}`);
+        windowEnd = windowStart;
     }
 
     // Fully exhausted — return best partial result we got (with incomplete flag)
-    console.log(`  Progressive extraction exhausted (front ${MAX_FRONT_PAGES} + tail ${TAIL_PAGES} pages of ${totalPages}), returning partial data`);
+    console.log(`  Progressive extraction exhausted (all ${totalPages} pages seen), returning partial data`);
     const bestResult: RawExtractedDecision = { ...lastFrontResult!, incomplete: true };
-    writeCache(pdfUrl, bestResult);
+    writeCache(cacheKey, bestResult);
     return { result: bestResult, usage: totalUsage, fromCache: false };
 }

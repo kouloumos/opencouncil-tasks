@@ -648,23 +648,8 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
         onProgress("extracting PDFs", 50);
         log(`\nExtracting ${allExtractionSubjects.length} decision PDFs (${extractionSubjects.length} new, ${needsExtractionSubjects.length} re-extraction)...`);
 
-        // Build subject list for meeting-level attendance computation.
-        // The pipeline uses this to compute effective attendance for ALL subjects
-        // (including those without decisions) using the complete discussion order.
-        let oaCounter = 0;
-        const allMeetingSubjects = request.subjects.map(s => {
-            const isOA = s.nonAgendaReason === 'outOfAgenda';
-            if (isOA) oaCounter++;
-            return {
-                subjectId: s.subjectId,
-                agendaItemIndex: s.agendaItemIndex,
-                outOfAgendaIndex: isOA ? oaCounter : null,
-            };
-        });
-
         const pipelineResult = await extractDecisionsFromPdfs(
             allExtractionSubjects,
-            allMeetingSubjects,
             request.people,
             (stage, percent) => {
                 // Map extraction progress (0-100) to overall progress (50-85)
@@ -673,6 +658,7 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
             },
             request.mayorId,
             request.forceExtract,
+            request.conventionsText ?? null,
         );
         totalUsage = addUsage(totalUsage, pipelineResult.usage);
 
@@ -726,20 +712,11 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
             }
         }
 
-        // Compute nonDecisionSubjectAttendance: effective attendance for subjects
-        // NOT extracted in this run. This includes subjects with linked decisions from
-        // previous runs — their attendance is safe to update because the effective
-        // attendance computation uses meeting-level data (roll call + attendance changes)
-        // that is the same regardless of how many PDFs were extracted.
-        const extractedSubjectIds = new Set(pipelineResult.decisions.map(d => d.subjectId));
-        const finalNonDecisionAttendance = pipelineResult.allSubjectAttendance
-            .filter(a => !extractedSubjectIds.has(a.subjectId));
-
         // Phase 2 summary
         log(`=== PHASE 2: EXTRACT ===`);
         log(`  PDFs: ${allExtractionSubjects.length} (${extractionSubjects.length} new, ${needsExtractionSubjects.length} re-extraction)`);
         log(`  Extracted: ${pipelineResult.decisions.length}/${allExtractionSubjects.length}`);
-        log(`  Attendance computed: ${pipelineResult.allSubjectAttendance.length} subjects (${finalNonDecisionAttendance.length} non-decision)`);
+        log(`  Attendance events: ${pipelineResult.attendanceEvents.length}`);
         if (pipelineResult.warnings.length > 0) {
             log(`  Warnings: ${pipelineResult.warnings.length}`);
             for (const w of pipelineResult.warnings) {
@@ -752,7 +729,7 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
             warnings: pipelineResult.warnings,
             initialAttendance: pipelineResult.initialAttendance,
             unmatchedInitialAttendance: pipelineResult.unmatchedInitialAttendance,
-            nonDecisionSubjectAttendance: finalNonDecisionAttendance,
+            attendanceEvents: pipelineResult.attendanceEvents,
         };
     } else if (extractionEnabled && allExtractionSubjects.length > 0 && (!request.people || request.people.length === 0)) {
         log(`Skipping extraction: no people provided for name matching`);
@@ -765,14 +742,12 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
 
     // Phase 3 summary
     log(`=== PHASE 3: FINALIZE ===`);
-    log(`  Non-decision attendance: ${extractionResult?.nonDecisionSubjectAttendance?.length ?? 0} subjects`);
 
     // Per-subject journey
     log(`=== SUBJECT JOURNEY ===`);
     for (const subject of request.subjects) {
         const match = matches.find(m => m.subjectId === subject.subjectId);
         const extraction = extractionResult?.decisions.find(d => d.subjectId === subject.subjectId);
-        const nonDecAtt = extractionResult?.nonDecisionSubjectAttendance?.find(a => a.subjectId === subject.subjectId);
         const posLabel = subject.agendaItemIndex != null ? `#${subject.agendaItemIndex}` : 'OA';
 
         let journey = `  ${posLabel} "${subject.name}"`;
@@ -784,9 +759,7 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
             journey += ` → unmatched`;
         }
         if (extraction) {
-            journey += ` → extracted → ${extraction.presentMemberIds.length}p/${extraction.absentMemberIds.length}a`;
-        } else if (nonDecAtt) {
-            journey += ` → attendance(${nonDecAtt.presentMemberIds.length}p/${nonDecAtt.absentMemberIds.length}a)`;
+            journey += ` → extracted → ${extraction.rollCall.present.length}p/${extraction.rollCall.absent.length}a as printed, ${extraction.attendanceChanges.length} changes`;
         }
         log(journey);
     }

@@ -19,6 +19,7 @@ import { processAgenda } from './tasks/processAgenda.js';
 import { generateVoiceprint } from './tasks/generateVoiceprint.js';
 import { generateHighlight } from './tasks/generateHighlight.js';
 import { pollDecisions } from './tasks/pollDecisions.js';
+import { profileBody } from './tasks/profileBody.js';
 import { devSlowTask } from './tasks/devSlowTask.js';
 import devRouter from './routes/dev.js';
 import uploadRouter from './routes/upload.js';
@@ -188,7 +189,14 @@ app.post('/generateHighlight', taskManager.registerTask(generateHighlight, {
 app.post('/pollDecisions', taskManager.registerTask(pollDecisions, {
   summary: 'Poll and extract decisions from Diavgeia',
   description: 'Fetch decisions from the Greek Government Transparency portal, match them to meeting subjects, and extract structured data (excerpt, attendance, votes) from matched PDFs',
-  version: 3,
+  // 4: per-document facts only (roll call as printed, named votes, changes with anchors), no replayed snapshots; per-vote absence as an event pair (2026-09-17)
+  version: 4,
+}));
+
+app.post('/profileBody', taskManager.registerTask(profileBody, {
+  summary: "Profile an administrative body's decision conventions",
+  description: "Sample an administrative body's documents on Diavgeia, record what each one states, and derive the decision conventions (roll-call layout, what a present list means, where attendance changes are pinned) the extraction pipeline reads",
+  version: 1,
 }));
 
 // Matches the gate on the other dev routes below: NODE_ENV is unset in the

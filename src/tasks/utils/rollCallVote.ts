@@ -31,9 +31,9 @@ export interface RollCallVoteResult {
  * Normalizes by sorting names (extraction order can vary) and
  * comparing the set of names + mayor status.
  */
-function serializeRollCall(entry: RollCallEntry): string {
-    const present = [...entry.presentMembers].sort().join('|');
-    const absent = [...entry.absentMembers].sort().join('|');
+function serializeRollCall(entry: RollCallEntry, resolve: (name: string) => string): string {
+    const present = [...new Set(entry.presentMembers.map(resolve))].sort().join('|');
+    const absent = [...new Set(entry.absentMembers.map(resolve))].sort().join('|');
     const mayor = entry.mayorPresent?.present ?? 'unknown';
     return `P:${present};;A:${absent};;M:${mayor}`;
 }
@@ -44,6 +44,12 @@ export function selectRollCall(
         absentMembers: string[] | null;
         mayorPresent: { present: boolean; rawText: string } | null;
     }>,
+    /**
+     * Two documents of one session spell a member differently («Παπαγεωργίου
+     * Χρυσούλα» / «Χρυσούλα Παπαγεωργίου»); compared as strings they split
+     * the vote and no roll call wins. Resolve names to the person first.
+     */
+    resolve: (name: string) => string = (name) => name,
 ): RollCallVoteResult {
     const totalPdfs = extractions.length;
 
@@ -65,7 +71,7 @@ export function selectRollCall(
             absentMembers: e.absentMembers || [],
             mayorPresent: e.mayorPresent,
         };
-        const key = serializeRollCall(entry);
+        const key = serializeRollCall(entry, resolve);
         const existing = groups.get(key);
         if (existing) {
             existing.count++;

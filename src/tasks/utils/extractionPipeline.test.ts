@@ -46,6 +46,11 @@ function makeRaw(overrides: Partial<RawExtractedDecision> = {}): RawExtractedDec
         discussionOrder: null,
         subjectInfo: { agendaItemIndex: 1, nonAgendaReason: null },
         incomplete: false,
+        attendanceFormat: 'explicit_present_absent',
+        compositionMembers: null,
+        presidedBy: null,
+        decisionAttendance: null,
+        voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
         ...overrides,
     };
 }
@@ -89,7 +94,7 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             fromCache: false,
         });
 
-        const result = await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
         expect(result.decisions).toHaveLength(1);
         const codes = result.decisions[0].warnings.map(w => w.code);
@@ -103,7 +108,7 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             fromCache: false,
         });
 
-        const result = await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
         const codes = result.decisions[0].warnings.map(w => w.code);
         expect(codes).toContain('EXTRACTION_INCOMPLETE');
@@ -119,7 +124,7 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             fromCache: false,
         });
 
-        const result = await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
         const codes = result.decisions[0].warnings.map(w => w.code);
         expect(codes).toContain('NO_VOTE_DETAILS');
@@ -132,9 +137,8 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             fromCache: false,
         });
 
-        const result = await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
-        // Only INFERRED_VOTES expected (unanimous with no explicit votes)
         const codes = result.decisions[0].warnings.map(w => w.code);
         expect(codes).not.toContain('MISSING_VOTE_RESULT');
         expect(codes).not.toContain('EXTRACTION_INCOMPLETE');
@@ -147,7 +151,12 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             result: makeRaw({
                 presentMembers: ['ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ', 'Μαρία Κωνσταντίνου'],
                 voteResult: 'Κατά πλειοψηφία',
-                voteDetails: [{ name: 'Παπαδόπουλος Ι.', vote: 'AGAINST' }],
+                // The same councillor twice: named in the dissenting list and
+                // again in a declaration line, once abbreviated and once in full.
+                voteDetails: [
+                    { name: 'Παπαδόπουλος Ι.', vote: 'AGAINST' },
+                    { name: 'ΠΑΠΑΔΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ', vote: 'PRESENT' },
+                ],
             }),
             usage: noUsage,
             fromCache: false,
@@ -165,12 +174,14 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             usage: noUsage,
         });
 
-        const result = await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
         const decision = result.decisions[0];
         const p1Votes = decision.voteDetails.filter(v => v.personId === 'p1');
         expect(p1Votes).toHaveLength(1);
+        // First occurrence wins.
         expect(p1Votes[0].vote).toBe('AGAINST');
+        expect(decision.voteDetails).toHaveLength(1);
     });
 
     it('passes full people list to LLM fallback (not filtered by already-matched)', async () => {
@@ -195,7 +206,7 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             usage: noUsage,
         });
 
-        await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
         expect(mockLlmMatchMembers).toHaveBeenCalledWith(
             ['Unknown Name'],
@@ -216,12 +227,42 @@ describe('extractDecisionsFromPdfs — warning propagation', () => {
             fromCache: false,
         });
 
-        const result = await extractDecisionsFromPdfs([makeSubject()], [{ subjectId: 'sub-1', agendaItemIndex: 1 }], people, noopProgress);
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
 
         const codes = result.decisions[0].warnings.map(w => w.code);
         // Raw-level warning
         expect(codes).toContain('MISSING_DECISION_NUMBER');
         // Post-matching warning
         expect(codes).toContain('NO_VOTE_DETAILS');
+    });
+});
+
+describe('extractDecisionsFromPdfs — names from the per-decision list and the presiding member reach the matcher', () => {
+    it('resolves them to ids like any other printed name', async () => {
+        mockMatchPersonByName.mockImplementation((name: string, people: PersonForMatching[]) => people.find(p => p.name === name)?.id ?? null);
+        mockExtractDecisionFromPdf.mockResolvedValueOnce({
+            result: makeRaw({ decisionAttendance: { present: ['Γιάννης Παπαδόπουλος'], rawText: 'ΤΑ ΜΕΛΗ' }, presidedBy: { name: 'Μαρία Κωνσταντίνου', rawText: 'προήδρευσε' } }),
+            usage: noUsage, fromCache: false,
+        });
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
+        expect(result.decisions[0].decisionAttendance?.presentIds).toEqual(['p1']);
+        expect(result.decisions[0].presidedBy?.personId).toBe('p2');
+        expect(result.decisions[0].unmatchedMembers).toEqual([]);
+    });
+});
+
+
+describe('extractDecisionsFromPdfs — a session whose roll calls split', () => {
+    it('still states the arrivals and departures its documents agree on', async () => {
+        mockMatchPersonByName.mockImplementation((name: string, people: PersonForMatching[]) => people.find(p => p.name === name)?.id ?? null);
+        const departure = { name: 'Μαρία Κωνσταντίνου', type: 'departure' as const, agendaItem: { agendaItemIndex: 3, nonAgendaReason: null }, timing: 'during' as const, rawText: 'αποχώρησε κατά τη συζήτηση του 3ου θέματος' };
+        // One document against one: neither roll call has a majority.
+        mockExtractDecisionFromPdf
+            .mockResolvedValueOnce({ result: makeRaw({ attendanceChanges: [departure] }), usage: noUsage, fromCache: false })
+            .mockResolvedValueOnce({ result: makeRaw({ attendanceChanges: [departure], absentMembers: [] }), usage: noUsage, fromCache: false });
+        const result = await extractDecisionsFromPdfs(
+            [makeSubject(), makeSubject({ subjectId: 's2', agendaItemIndex: 2 })], people, noopProgress);
+        expect(result.initialAttendance).toEqual([]);
+        expect(result.attendanceEvents.map(e => [e.personId, e.type, e.reportingPdfCount])).toEqual([['p2', 'departure', 2]]);
     });
 });
