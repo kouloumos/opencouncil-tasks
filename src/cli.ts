@@ -651,7 +651,8 @@ program
     .description('Extract decision data from a Diavgeia ADA, PDF URL, or local file path')
     .option('-O, --output-file <file>', 'Save result to file (otherwise prints to stdout)')
     .option('--skip-cache', 'Skip the on-disk extraction cache and re-extract from the PDF')
-    .action(async (source: string, options: { outputFile?: string; skipCache?: boolean }) => {
+    .option('--hints-file <file>', "The body's conventions text, as the poll request carries it (opencouncil: scripts/conventions-text.ts); without it the page is read cold")
+    .action(async (source: string, options: { outputFile?: string; skipCache?: boolean; hintsFile?: string }) => {
         try {
             // Resolve source: local file, URL, or ADA
             let pdfUrl: string;
@@ -666,7 +667,8 @@ program
                 console.log(`Extracting decision data for ADA: ${source}`);
                 console.log(`PDF URL: ${pdfUrl}`);
             }
-            const { result, usage } = await extractDecisionFromPdf(pdfUrl, undefined, options.skipCache);
+            const hints = options.hintsFile ? fs.readFileSync(options.hintsFile, 'utf-8').trim() : undefined;
+            const { result, usage } = await extractDecisionFromPdf(pdfUrl, undefined, options.skipCache, hints);
 
             // Display summary
             const totalTokens = usage.input_tokens + usage.output_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
