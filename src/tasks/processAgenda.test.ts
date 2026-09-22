@@ -65,6 +65,13 @@ describe("AGENDA_EXTRACTION_SCHEMA", () => {
         expect(AGENDA_EXTRACTION_SCHEMA.items.properties.agendaItemTitle).toEqual({ type: ["string", "null"] });
         expect(AGENDA_EXTRACTION_SCHEMA.items.required).toContain("agendaItemTitle");
     });
+
+    it("declares the section fields as nullable and requires them", () => {
+        expect(AGENDA_EXTRACTION_SCHEMA.items.properties.agendaSectionIndex).toEqual({ type: ["number", "null"] });
+        expect(AGENDA_EXTRACTION_SCHEMA.items.properties.agendaSectionTitle).toEqual({ type: ["string", "null"] });
+        expect(AGENDA_EXTRACTION_SCHEMA.items.required).toContain("agendaSectionIndex");
+        expect(AGENDA_EXTRACTION_SCHEMA.items.required).toContain("agendaSectionTitle");
+    });
 });
 
 describe("agenda warning concatenation", () => {
@@ -90,6 +97,8 @@ describe("extractedSubjectToApiSubject", () => {
             description: "Έγκριση προϋπολογισμού.",
             agendaItemTitle: "ΕΓΚΡΙΣΗ ΠΡΟΫΠΟΛΟΓΙΣΜΟΥ 2026",
             agendaItemIndex: 1,
+            agendaSectionIndex: null,
+            agendaSectionTitle: null,
             introducedByPersonId: null,
             speakerContributions: [],
             locationText: null,
@@ -103,5 +112,32 @@ describe("extractedSubjectToApiSubject", () => {
         expect(vi.mocked(enrichSubjectData).mock.calls[0][0]).toMatchObject({
             agendaItemTitle: "ΕΓΚΡΙΣΗ ΠΡΟΫΠΟΛΟΓΙΣΜΟΥ 2026",
         });
+    });
+
+    it("forwards a section as one object, and no section as null", async () => {
+        vi.mocked(enrichSubjectData).mockResolvedValue({ result: {}, usage: {}, resolvedModel: "m", batchMode: false } as never);
+
+        const base: ExtractedSubject = {
+            name: "Παράταση ωραρίου",
+            description: "Παράταση ωραρίου μουσικής.",
+            agendaItemTitle: "“ΚΑΦΕ ΜΠΑΡ” στην οδό Χ",
+            agendaItemIndex: 3,
+            agendaSectionIndex: 2,
+            agendaSectionTitle: "ΠΑΡΑΤΑΣΕΙΣ ΩΡΑΡΙΟΥ ΜΟΥΣΙΚΗΣ",
+            introducedByPersonId: null,
+            speakerContributions: [],
+            locationText: null,
+            topicLabel: null,
+            topicImportance: "normal",
+            proximityImportance: "none",
+        };
+
+        await extractedSubjectToApiSubject(base, "Αθήνα", "el", undefined, "2026-09-05");
+        expect(vi.mocked(enrichSubjectData).mock.calls.at(-1)![0]).toMatchObject({
+            agendaSection: { index: 2, title: "ΠΑΡΑΤΑΣΕΙΣ ΩΡΑΡΙΟΥ ΜΟΥΣΙΚΗΣ" },
+        });
+
+        await extractedSubjectToApiSubject({ ...base, agendaSectionIndex: null, agendaSectionTitle: null }, "Αθήνα", "el", undefined, "2026-09-05");
+        expect(vi.mocked(enrichSubjectData).mock.calls.at(-1)![0]).toMatchObject({ agendaSection: null });
     });
 });

@@ -196,6 +196,12 @@ export interface Subject {
      * When the field is absent, the app keeps the stored value.
      */
     agendaItemTitle?: string | null;
+    /**
+     * The agenda section the item sits under (issue 366). processAgenda sets it for
+     * every subject; null means the agenda has one numbered list. summarize never
+     * sends it, and an absent field leaves the stored value alone.
+     */
+    agendaSection?: { index: number; title: string } | null;
     agendaItemIndex: number | "BEFORE_AGENDA" | "OUT_OF_AGENDA";
     introducedByPersonId: string | null;
 

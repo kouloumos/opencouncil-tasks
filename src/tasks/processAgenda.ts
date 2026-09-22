@@ -21,13 +21,15 @@ export const AGENDA_EXTRACTION_SCHEMA = {
             description: { type: "string" },
             agendaItemTitle: { type: ["string", "null"] },
             agendaItemIndex: { type: ["number", "null"] },
+            agendaSectionIndex: { type: ["number", "null"] },
+            agendaSectionTitle: { type: ["string", "null"] },
             locationText: { type: ["string", "null"] },
             introducedByPersonId: { type: ["string", "null"] },
             topicLabel: { type: ["string", "null"] },
             topicImportance: { type: "string", enum: ["doNotNotify", "normal", "high"] },
             proximityImportance: { type: "string", enum: ["none", "near", "wide"] },
         },
-        required: ["name", "description", "agendaItemTitle", "agendaItemIndex", "locationText", "introducedByPersonId", "topicLabel", "topicImportance", "proximityImportance"],
+        required: ["name", "description", "agendaItemTitle", "agendaItemIndex", "agendaSectionIndex", "agendaSectionTitle", "locationText", "introducedByPersonId", "topicLabel", "topicImportance", "proximityImportance"],
         additionalProperties: false
     }
 };
@@ -170,6 +172,9 @@ export const extractedSubjectToApiSubject = async (
         proximityImportance: subject.proximityImportance,
         topicLabel: subject.topicLabel,
         agendaItemIndex: subject.agendaItemIndex!,
+        agendaSection: subject.agendaSectionIndex !== null && subject.agendaSectionTitle !== null
+            ? { index: subject.agendaSectionIndex, title: subject.agendaSectionTitle }
+            : null,
         introducedByPersonId: subject.introducedByPersonId,
         speakerContributions: subject.speakerContributions,
         discussedIn: null  // Agenda items are always independent initially
@@ -224,6 +229,8 @@ export type ExtractedSubject = {
     description: string;
     agendaItemTitle: string | null;
     agendaItemIndex: number | null;
+    agendaSectionIndex: number | null;
+    agendaSectionTitle: string | null;
     introducedByPersonId: string | null;
     speakerContributions: {
         speakerId: string | null;
