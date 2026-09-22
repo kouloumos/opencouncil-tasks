@@ -6,7 +6,12 @@ import { fetchAgendaDocument, type AgendaDocument } from "../lib/documentConvers
 import { AGENDA_ITEM_TITLE_RULES, normalizeAgendaItemTitle } from "../lib/agendaItemTitle.js";
 import { CityLanguage, CountryCode, ProcessAgendaRequest, ProcessAgendaResult, Subject, TaskWarning, TopicLabelInfo } from "../types.js";
 
-export type AgendaWarningCode = 'MISSING_AGENDA_ITEM_INDEX' | 'MISSING_AGENDA_ITEM_TITLE';
+export type AgendaWarningCode =
+    | 'MISSING_AGENDA_ITEM_INDEX'
+    | 'MISSING_AGENDA_ITEM_TITLE'
+    | 'INCONSISTENT_AGENDA_SECTION'
+    | 'PARTIAL_AGENDA_SECTIONS'
+    | 'DUPLICATE_AGENDA_ITEM_INDEX';
 import { formatTopicLabels } from "../lib/promptUtils.js";
 import { Task } from "./pipeline.js";
 import { generateSubjectUUID, extractMeetingId } from "../utils.js";
@@ -205,6 +210,168 @@ export function fillMissingAgendaIndices(subjects: Array<{ agendaItemIndex: numb
         code: 'MISSING_AGENDA_ITEM_INDEX',
         severity: 'warning',
         message: `${nullCount} subject(s) had no agenda item number in the agenda document — assigned sequential indices`,
+    }];
+}
+
+type SectionedSubject = {
+    name: string;
+    /** The printed number, when the item has one. The collapse rule reads it so
+     *  that dropping the sections cannot merge two numbering domains into one. */
+    agendaItemIndex?: number | null;
+    agendaSectionIndex: number | null;
+    agendaSectionTitle: string | null;
+};
+
+/**
+ * Normalizes the sections in place. A section's identity is the printed index
+ * alone. Titles are folded (whitespace, trailing stop, case) for comparison
+ * only, so a stray stop or a casing variant never splits a section; each item
+ * keeps the title the model returned. A half-filled section is dropped, a
+ * single section shared by the whole agenda means the agenda has one list, and
+ * the sections are renumbered 1..K in the order of the model's own indices, not
+ * the order the items arrived in. Reports what it dropped, what it left uneven,
+ * and any index the model gave more than one title; it never guesses a section
+ * for an item.
+ *
+ * One index carrying two titles stays ONE section. Splitting it would shift the
+ * index of every later section, and the app matches an agenda item by its
+ * (section, number) position, so a shift makes it prune and recreate rows under
+ * new public ids.
+ */
+export function normalizeExtractedSections(subjects: SectionedSubject[]): TaskWarning<AgendaWarningCode>[] {
+    const warnings: TaskWarning<AgendaWarningCode>[] = [];
+
+    const inconsistent: string[] = [];
+    for (const s of subjects) {
+        const title = s.agendaSectionTitle?.trim().replace(/\s+/g, ' ') || null;
+        const index = typeof s.agendaSectionIndex === 'number' ? s.agendaSectionIndex : null;
+        if ((title === null) !== (index === null)) {
+            inconsistent.push(s.name);
+            s.agendaSectionIndex = null;
+            s.agendaSectionTitle = null;
+        } else {
+            s.agendaSectionIndex = index;
+            s.agendaSectionTitle = title;
+        }
+    }
+    if (inconsistent.length > 0) {
+        console.warn(`   ⚠️  ${inconsistent.length} subject(s) came back with half a section: ${inconsistent.join(' | ')}`);
+        warnings.push({
+            code: 'INCONSISTENT_AGENDA_SECTION',
+            severity: 'warning',
+            message: `${inconsistent.length} subject(s) came back with a section index but no title, or a title but no index, and were treated as unsectioned: ${inconsistent.join(' | ')}`,
+        });
+    }
+
+    const sectioned = subjects.filter(s => s.agendaSectionIndex !== null);
+    if (sectioned.length === 0) return warnings;
+
+    if (sectioned.length < subjects.length) {
+        const unsectioned = subjects.filter(s => s.agendaSectionIndex === null).map(s => s.name);
+        console.warn(`   ⚠️  ${unsectioned.length} subject(s) have no section while ${sectioned.length} do: ${unsectioned.join(' | ')}`);
+        warnings.push({
+            code: 'PARTIAL_AGENDA_SECTIONS',
+            severity: 'warning',
+            message: `${unsectioned.length} subject(s) have no section while ${sectioned.length} do: ${unsectioned.join(' | ')}`,
+        });
+    }
+
+    // The distinct titles the model wrote under each index, keyed by the folded
+    // form and valued by the first verbatim spelling, which is what a person reads.
+    const titlesByIndex = new Map<number, Map<string, string>>();
+    for (const s of sectioned) {
+        const titles = titlesByIndex.get(s.agendaSectionIndex!) ?? new Map<string, string>();
+        const folded = foldSectionTitle(s.agendaSectionTitle);
+        if (!titles.has(folded)) titles.set(folded, s.agendaSectionTitle!);
+        titlesByIndex.set(s.agendaSectionIndex!, titles);
+    }
+
+    // The same printed index with more than one title means the model was inconsistent.
+    // The items stay in one section; a person is told to look at the document.
+    let ambiguous = false;
+    for (const [index, titles] of titlesByIndex) {
+        if (titles.size <= 1) continue;
+        ambiguous = true;
+        const titleList = [...titles.values()].join(' | ');
+        console.warn(`   ⚠️  section index ${index} carries more than one title: ${titleList}`);
+        warnings.push({
+            code: 'INCONSISTENT_AGENDA_SECTION',
+            severity: 'warning',
+            message: `Section index ${index} carries more than one title, and was kept as one section: ${titleList}`,
+        });
+    }
+
+    // One section for the whole agenda is no section at all: the agenda has one
+    // list. Unless dropping it would put two items on the same printed number —
+    // then the section is the only thing telling them apart and it stays.
+    const indices = [...titlesByIndex.keys()].sort((a, b) => a - b);
+    if (indices.length === 1 && !ambiguous && !collapseWouldRepeatANumber(subjects)) {
+        for (const s of subjects) {
+            s.agendaSectionIndex = null;
+            s.agendaSectionTitle = null;
+        }
+        return warnings;
+    }
+
+    const renumbered = new Map(indices.map((index, position) => [index, position + 1]));
+    for (const s of sectioned) s.agendaSectionIndex = renumbered.get(s.agendaSectionIndex!)!;
+
+    return warnings;
+}
+
+/**
+ * The section title as it is compared: the agenda item rules (whitespace, trailing
+ * stop, blank to null), then case, accents and the final sigma folded away. Greek
+ * headings are printed in capitals, which carry no accents, so «ΓΕΝΙΚΑ ΘΕΜΑΤΑ» and
+ * «Γενικά Θέματα» are the same heading and must fold to the same string. An
+ * item keeps its verbatim title; only the comparison sees this form.
+ */
+function foldSectionTitle(title: string | null): string {
+    const lowered = normalizeAgendaItemTitle(title)?.toLocaleLowerCase('el');
+    if (!lowered) return '';
+    return lowered.normalize('NFD').replace(/\p{M}/gu, '').replace(/\u03c2/g, '\u03c3');
+}
+
+/**
+ * Whether dropping every section would leave two items sharing one printed
+ * number. An item with no number cannot collide: fillMissingAgendaIndices gives
+ * it a free one within its section afterwards.
+ */
+function collapseWouldRepeatANumber(subjects: SectionedSubject[]): boolean {
+    const seen = new Set<number>();
+    for (const s of subjects) {
+        if (typeof s.agendaItemIndex !== 'number') continue;
+        if (seen.has(s.agendaItemIndex)) return true;
+        seen.add(s.agendaItemIndex);
+    }
+    return false;
+}
+
+/**
+ * Reports every (section, number) pair that more than one subject carries. The
+ * subjects are returned as they are: the app matches by name before position,
+ * and the warning is the signal that the document needs a look.
+ */
+export function warnDuplicateAgendaPositions(
+    subjects: Array<{ name: string; agendaItemIndex: number | null; agendaSectionIndex: number | null }>
+): TaskWarning<AgendaWarningCode>[] {
+    const byPosition = new Map<string, string[]>();
+    const labelByKey = new Map<string, string>();
+    for (const s of subjects) {
+        if (s.agendaItemIndex === null) continue;
+        const key = `${s.agendaSectionIndex ?? '-'}:${s.agendaItemIndex}`;
+        byPosition.set(key, [...(byPosition.get(key) ?? []), s.name]);
+        labelByKey.set(key, s.agendaSectionIndex === null ? `#${s.agendaItemIndex}` : `${s.agendaSectionIndex}:${s.agendaItemIndex}`);
+    }
+    const duplicates = [...byPosition].filter(([, names]) => names.length > 1);
+    if (duplicates.length === 0) return [];
+
+    const detail = duplicates.map(([key, names]) => `${labelByKey.get(key)}: ${names.join(' / ')}`).join(' | ');
+    console.warn(`   ⚠️  ${duplicates.length} agenda position(s) carry more than one subject: ${detail}`);
+    return [{
+        code: 'DUPLICATE_AGENDA_ITEM_INDEX',
+        severity: 'warning',
+        message: `${duplicates.length} agenda position(s) (section:number) carry more than one subject — ${detail}`,
     }];
 }
 
