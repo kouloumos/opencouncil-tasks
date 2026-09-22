@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
+import type Anthropic from "@anthropic-ai/sdk";
 
 // processAgenda.ts imports the AI client, the enrichment, and the document
-// reader at module level. None of them run in this test.
+// reader at module level. These are mocked so no network or model call runs.
+// The extractAgendaSubjects tests below drive the aiChat and
+// fetchAgendaDocument mocks directly.
 vi.mock("../lib/ai.js", () => ({ aiChat: vi.fn(), addUsage: vi.fn(), NO_USAGE: {} }));
 vi.mock("../lib/subjectEnrichment.js", () => ({ enrichSubjectData: vi.fn() }));
 vi.mock("../lib/documentConversion.js", () => ({ fetchAgendaDocument: vi.fn() }));
@@ -14,11 +17,14 @@ import {
     warnDuplicateAgendaPositions,
     getSystemPrompt,
     extractedSubjectToApiSubject,
+    extractAgendaSubjects,
     AGENDA_EXTRACTION_SCHEMA,
     type ExtractedSubject,
 } from "./processAgenda.js";
 import { AGENDA_ITEM_TITLE_RULES } from "../lib/agendaItemTitle.js";
 import { enrichSubjectData } from "../lib/subjectEnrichment.js";
+import { aiChat, type ResultWithUsage } from "../lib/ai.js";
+import { fetchAgendaDocument } from "../lib/documentConversion.js";
 
 describe("normalizeExtractedTitles", () => {
     it("collapses whitespace in place and returns no warning when every title is present", () => {
@@ -159,6 +165,82 @@ describe("extractedSubjectToApiSubject", () => {
 
         await extractedSubjectToApiSubject({ ...base, agendaSectionIndex: null, agendaSectionTitle: null }, "Αθήνα", "el", undefined, "2026-09-05");
         expect(vi.mocked(enrichSubjectData).mock.calls.at(-1)![0]).toMatchObject({ agendaSection: null });
+    });
+});
+
+describe("extractAgendaSubjects", () => {
+    it("renumbers sections, fills a missing index within its section, and collapses a title", async () => {
+        const usage: Anthropic.Messages.Usage = {
+            input_tokens: 120,
+            output_tokens: 45,
+            cache_creation_input_tokens: null,
+            cache_read_input_tokens: null,
+            cache_creation: null,
+            server_tool_use: null,
+            service_tier: null,
+            inference_geo: null,
+            output_tokens_details: null,
+        };
+        const modelItems: Omit<ExtractedSubject, "speakerContributions">[] = [
+            {
+                name: "Γλυπτό",
+                description: "Περιγραφή για Γλυπτό.",
+                agendaItemTitle: "ΤΙΤΛΟΣ  Α",
+                agendaItemIndex: 1,
+                agendaSectionIndex: 3,
+                agendaSectionTitle: "ΓΕΝΙΚΑ ΘΕΜΑΤΑ",
+                introducedByPersonId: null,
+                locationText: null,
+                topicLabel: null,
+                topicImportance: "normal",
+                proximityImportance: "none",
+            },
+            {
+                name: "Παρέα",
+                description: "Περιγραφή για Παρέα.",
+                agendaItemTitle: "ΤΙΤΛΟΣ Παρέα",
+                agendaItemIndex: null,
+                agendaSectionIndex: 7,
+                agendaSectionTitle: "ΠΑΡΑΤΑΣΕΙΣ ΩΡΑΡΙΟΥ ΜΟΥΣΙΚΗΣ",
+                introducedByPersonId: null,
+                locationText: null,
+                topicLabel: null,
+                topicImportance: "normal",
+                proximityImportance: "none",
+            },
+        ];
+        vi.mocked(fetchAgendaDocument).mockResolvedValue({ kind: "pdf", base64: "" });
+        vi.mocked(aiChat).mockResolvedValue({
+            result: modelItems,
+            usage,
+            resolvedModel: "m",
+            batchMode: false,
+        } as ResultWithUsage<Omit<ExtractedSubject, "speakerContributions">[]>);
+
+        const extraction = await extractAgendaSubjects({
+            agendaUrl: "https://example.org/agenda.pdf",
+            people: [],
+            topicLabels: [],
+            cityName: "Αθήνα",
+            cityLanguage: "el",
+            date: "2026-09-05",
+        }, () => { });
+
+        // The two sections (3, 7) are renumbered to 1, 2 in order of appearance.
+        expect(extraction.extracted.map(s => [s.name, s.agendaSectionIndex, s.agendaItemIndex])).toEqual([
+            ["Γλυπτό", 1, 1], ["Παρέα", 2, 1],
+        ]);
+        expect(extraction.extracted.map(s => s.agendaSectionTitle)).toEqual([
+            "ΓΕΝΙΚΑ ΘΕΜΑΤΑ", "ΠΑΡΑΤΑΣΕΙΣ ΩΡΑΡΙΟΥ ΜΟΥΣΙΚΗΣ",
+        ]);
+        // A double space in the first item's title is collapsed to one.
+        expect(extraction.extracted[0].agendaItemTitle).toBe("ΤΙΤΛΟΣ Α");
+        // The second item's missing index is filled to 1, the first number
+        // within its own (renumbered) section.
+        expect(extraction.warnings).toHaveLength(1);
+        expect(extraction.warnings[0].code).toBe("MISSING_AGENDA_ITEM_INDEX");
+        expect(extraction.extracted.map(s => s.speakerContributions)).toEqual([[], []]);
+        expect(extraction.extraction.usage).toEqual(usage);
     });
 });
 

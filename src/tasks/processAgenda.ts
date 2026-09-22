@@ -39,20 +39,17 @@ export const AGENDA_EXTRACTION_SCHEMA = {
     }
 };
 
-export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = async (request, onProgress) => {
-    const meetingId = extractMeetingId(request.callbackUrl);
+export type AgendaExtraction = {
+    extracted: ExtractedSubject[];
+    warnings: TaskWarning<AgendaWarningCode>[];
+    extraction: UsageStats;
+};
 
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log(`🚀 PROCESS AGENDA STARTED [${meetingId}]`);
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log(`📊 Request Details:`);
-    console.log(`   • City: ${request.cityName}`);
-    console.log(`   • Date: ${request.date}`);
-    console.log(`   • Agenda: ${request.agendaUrl}`);
-    console.log(`   • People: ${request.people.length}`);
-    console.log(`   • Topic labels: ${request.topicLabels.length}`);
-    console.log('───────────────────────────────────────────────────────────');
-
+/** Phases 1 and 2: the document and the model's reading of it, normalized. No enrichment. */
+export const extractAgendaSubjects = async (
+    request: Omit<ProcessAgendaRequest, 'callbackUrl'>,
+    onProgress: (stage: string, progressPercent: number) => void
+): Promise<AgendaExtraction> => {
     if (!request.agendaUrl) {
         throw new Error("Agenda is required");
     }
@@ -79,9 +76,7 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
 
     onProgress("extraction", 1);
 
-    const extracted = result.result;
-    const extractionModel = result.resolvedModel;
-    const extractionBatch = result.batchMode;
+    const extracted: ExtractedSubject[] = result.result.map(s => ({ ...s, speakerContributions: [] }));
     // Sections first: a filled number depends on its section, and the
     // duplicate check depends on both.
     const warnings = normalizeExtractedSections(extracted);
@@ -103,6 +98,7 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
         if (s.agendaItemTitle !== null) titledCount++;
         if (s.agendaSectionIndex !== null) sectionedCount++;
     }
+    const sectionCount = new Set(extracted.map(s => s.agendaSectionIndex).filter(i => i !== null)).size;
 
     console.log(`   Extracted ${extracted.length} subjects`);
     console.log(`   Importance: ${importanceDist.high} high, ${importanceDist.normal} normal, ${importanceDist.doNotNotify} doNotNotify`);
@@ -110,11 +106,34 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
     console.log(`   Topics assigned: ${topicCount}/${extracted.length}`);
     console.log(`   Locations found: ${locationTextCount}/${extracted.length}`);
     console.log(`   Agenda item titles kept: ${titledCount}/${extracted.length}`);
-    const sectionCount = new Set(extracted.map(s => s.agendaSectionIndex).filter(i => i !== null)).size;
     console.log(`   Sections: ${sectionCount} (${sectionedCount}/${extracted.length} subjects sectioned)`);
 
+    return {
+        extracted,
+        warnings,
+        extraction: { usage: result.usage, resolvedModel: result.resolvedModel, batchMode: result.batchMode },
+    };
+};
+
+export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = async (request, onProgress) => {
+    const meetingId = extractMeetingId(request.callbackUrl);
+
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`🚀 PROCESS AGENDA STARTED [${meetingId}]`);
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`📊 Request Details:`);
+    console.log(`   • City: ${request.cityName}`);
+    console.log(`   • Date: ${request.date}`);
+    console.log(`   • Agenda: ${request.agendaUrl}`);
+    console.log(`   • People: ${request.people.length}`);
+    console.log(`   • Topic labels: ${request.topicLabels.length}`);
+    console.log('───────────────────────────────────────────────────────────');
+
+    const { extracted, warnings, extraction } = await extractAgendaSubjects(request, onProgress);
+    const locationTextCount = extracted.filter(s => s.locationText).length;
+
     const usagePhases: ({ label: string } & UsageStats)[] = [
-        { label: 'Phase 2 (Extraction)', usage: result.usage, resolvedModel: extractionModel, batchMode: extractionBatch }
+        { label: 'Phase 2 (Extraction)', ...extraction }
     ];
 
     console.log('');
@@ -126,7 +145,7 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
     let enrichmentBatchMode: boolean | undefined;
     const enrichmentResults = await Promise.all(
         extracted.map((s, i) => extractedSubjectToApiSubject(
-            { ...s, speakerContributions: [] },
+            s,
             request.cityName,
             request.cityLanguage,
             request.country,
