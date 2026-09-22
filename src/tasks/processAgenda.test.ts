@@ -60,6 +60,24 @@ describe("getSystemPrompt", () => {
         expect(prompt).toContain(AGENDA_ITEM_TITLE_RULES);
         expect(prompt).toContain("agendaItemTitle: string | null;");
     });
+
+    it("forbids composing a section title and names the body line for a bundled invitation", () => {
+        const prompt = getSystemPrompt("el");
+
+        // A bundled PDF has no heading over each invitation, so the model used to
+        // invent one ("Πρόσκληση 43 — ..."). It must quote the letterhead instead.
+        expect(prompt).toContain("ΜΗΝ συνθέτεις δικό σου τίτλο");
+        expect(prompt).toContain("ΔΗΜΟΤΙΚΗ ΕΠΙΤΡΟΠΗ");
+    });
+
+    it("declares the section fields and tells the model to keep the printed number", () => {
+        const prompt = getSystemPrompt("el");
+
+        expect(prompt).toContain("agendaSectionIndex: number | null;");
+        expect(prompt).toContain("agendaSectionTitle: string | null;");
+        expect(prompt).toContain("ΜΗΝ αλλάζεις την αρίθμηση");
+        expect(prompt).toContain("ΓΕΝΙΚΑ ΘΕΜΑΤΑ");
+    });
 });
 
 describe("AGENDA_EXTRACTION_SCHEMA", () => {
