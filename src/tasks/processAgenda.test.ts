@@ -397,3 +397,42 @@ describe("warnDuplicateAgendaPositions", () => {
         expect(warnings[0].message).toContain("2:3: Ξενία");
     });
 });
+
+describe("fillMissingAgendaIndices", () => {
+    it("fills a gap after the last number of its own section", () => {
+        const subjects = [
+            { agendaItemIndex: 1, agendaSectionIndex: 1 },
+            { agendaItemIndex: 2, agendaSectionIndex: 1 },
+            { agendaItemIndex: null, agendaSectionIndex: 1 },
+            { agendaItemIndex: 1, agendaSectionIndex: 2 },
+            { agendaItemIndex: null, agendaSectionIndex: 2 },
+            { agendaItemIndex: null, agendaSectionIndex: 2 },
+        ];
+
+        const warnings = fillMissingAgendaIndices(subjects);
+
+        expect(subjects.map(s => s.agendaItemIndex)).toEqual([1, 2, 3, 1, 2, 3]);
+        expect(warnings.map(w => w.code)).toEqual(["MISSING_AGENDA_ITEM_INDEX"]);
+    });
+
+    it("fills after the overall maximum when there are no sections", () => {
+        const subjects = [{ agendaItemIndex: 4 }, { agendaItemIndex: null }, { agendaItemIndex: 2 }];
+
+        fillMissingAgendaIndices(subjects);
+
+        expect(subjects.map(s => s.agendaItemIndex)).toEqual([4, 5, 2]);
+    });
+
+    it("starts a section at 1 when every one of its items lacks a number", () => {
+        const subjects = [
+            { agendaItemIndex: null, agendaSectionIndex: 5 },
+            { agendaItemIndex: null, agendaSectionIndex: 5 },
+            { agendaItemIndex: 2, agendaSectionIndex: 1 },
+        ];
+
+        const warnings = fillMissingAgendaIndices(subjects);
+
+        expect(subjects.map(s => s.agendaItemIndex)).toEqual([1, 2, 2]);
+        expect(warnings.map(w => w.code)).toEqual(["MISSING_AGENDA_ITEM_INDEX"]);
+    });
+});

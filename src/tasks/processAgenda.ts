@@ -82,7 +82,11 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
     const extracted = result.result;
     const extractionModel = result.resolvedModel;
     const extractionBatch = result.batchMode;
-    const warnings = fillMissingAgendaIndices(extracted);
+    // Sections first: a filled number depends on its section, and the
+    // duplicate check depends on both.
+    const warnings = normalizeExtractedSections(extracted);
+    warnings.push(...fillMissingAgendaIndices(extracted));
+    warnings.push(...warnDuplicateAgendaPositions(extracted));
     warnings.push(...normalizeExtractedTitles(extracted));
 
     const importanceDist = { doNotNotify: 0, normal: 0, high: 0 };
@@ -90,12 +94,14 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
     let topicCount = 0;
     let locationTextCount = 0;
     let titledCount = 0;
+    let sectionedCount = 0;
     for (const s of extracted) {
         importanceDist[s.topicImportance]++;
         if (s.introducedByPersonId) introducerCount++;
         if (s.topicLabel) topicCount++;
         if (s.locationText) locationTextCount++;
         if (s.agendaItemTitle !== null) titledCount++;
+        if (s.agendaSectionIndex !== null) sectionedCount++;
     }
 
     console.log(`   Extracted ${extracted.length} subjects`);
@@ -104,6 +110,8 @@ export const processAgenda: Task<ProcessAgendaRequest, ProcessAgendaResult> = as
     console.log(`   Topics assigned: ${topicCount}/${extracted.length}`);
     console.log(`   Locations found: ${locationTextCount}/${extracted.length}`);
     console.log(`   Agenda item titles kept: ${titledCount}/${extracted.length}`);
+    const sectionCount = new Set(extracted.map(s => s.agendaSectionIndex).filter(i => i !== null)).size;
+    console.log(`   Sections: ${sectionCount} (${sectionedCount}/${extracted.length} subjects sectioned)`);
 
     const usagePhases: ({ label: string } & UsageStats)[] = [
         { label: 'Phase 2 (Extraction)', usage: result.usage, resolvedModel: extractionModel, batchMode: extractionBatch }
@@ -193,17 +201,26 @@ export const extractedSubjectToApiSubject = async (
     });
 }
 
-export function fillMissingAgendaIndices(subjects: Array<{ agendaItemIndex: number | null }>): TaskWarning<AgendaWarningCode>[] {
+export function fillMissingAgendaIndices(
+    subjects: Array<{ agendaItemIndex: number | null; agendaSectionIndex?: number | null }>
+): TaskWarning<AgendaWarningCode>[] {
     const nullCount = subjects.filter(s => s.agendaItemIndex === null).length;
     if (nullCount === 0) return [];
 
-    const maxIndex = subjects.reduce((max, s) =>
-        typeof s.agendaItemIndex === 'number' ? Math.max(max, s.agendaItemIndex) : max, 0);
-    let nextIndex = maxIndex + 1;
+    // A gap is filled after the last number of its own section, so section 2
+    // never borrows a number from section 1's range.
+    const lastBySection = new Map<number | null, number>();
     for (const s of subjects) {
-        if (s.agendaItemIndex === null) {
-            s.agendaItemIndex = nextIndex++;
-        }
+        if (typeof s.agendaItemIndex !== 'number') continue;
+        const section = s.agendaSectionIndex ?? null;
+        lastBySection.set(section, Math.max(lastBySection.get(section) ?? 0, s.agendaItemIndex));
+    }
+    for (const s of subjects) {
+        if (s.agendaItemIndex !== null) continue;
+        const section = s.agendaSectionIndex ?? null;
+        const next = (lastBySection.get(section) ?? 0) + 1;
+        s.agendaItemIndex = next;
+        lastBySection.set(section, next);
     }
     console.warn(`   ⚠️  ${nullCount} subject(s) missing agenda item number — assigning sequential indices`);
     return [{
