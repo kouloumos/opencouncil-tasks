@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { aiChat, ResultWithUsage, NO_USAGE, addUsage, HAIKU_MODEL } from '../../lib/ai.js';
-import type { DecisionConventions } from '../../types.js';
+import type { AttendancePhase, DecisionConventions } from '../../types.js';
 import { PDFDocument } from 'pdf-lib';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -82,14 +82,17 @@ export type AgendaItemRef = {
     nonAgendaReason: 'outOfAgenda' | null;  // null = regular agenda item
 };
 
-/** What a document pins an attendance change to. Only agenda_item resolves to a subject directly. */
-export type AttendanceAnchorKind =
+/**
+ * What a document pins an attendance change to — the vocabulary of the page, as
+ * read. It is not the wire vocabulary: `wireAnchor` maps it to
+ * `AttendanceAnchorKind` in types.ts, which has `subject` where this has
+ * `this_document` and no `this_document` of its own.
+ */
+export type DocumentAnchorKind =
     | 'agenda_item' | 'decision_number' | 'phase' | 'this_document' | 'session_start' | 'session_end';
 
-export type AttendancePhase = 'pre_agenda' | 'out_of_agenda';
-
 export interface AttendanceAnchor {
-    kind: AttendanceAnchorKind;
+    kind: DocumentAnchorKind;
     agendaItem: AgendaItemRef | null;      // when kind is agenda_item
     decisionNumber: string | null;         // when kind is decision_number, e.g. "286"
     phase: AttendancePhase | null;         // when kind is phase: the block the page names
@@ -142,6 +145,10 @@ interface RawLlmExtraction {
     incomplete: boolean;
     /** Who presided in the mayor's or president's place; name "" when the page says nothing. */
     presidedBy: { name: string; rawText: string };
+    /** Who kept the minutes in the secretary's place («εκτελούσα χρέη Γραμματέα»); name "" when the page says nothing. */
+    actingSecretary: { name: string; rawText: string };
+    /** The item heading as printed («ΘΕΜΑ 3ο», «1ο ΕΚΤΑΚΤΟ ΘΕΜΑ»); "" when the page prints no item number for this decision. */
+    subjectHeading: string;
     /** The members listed as present for THIS decision after the decision text (ΤΑ ΜΕΛΗ); empty when the page prints no such list. */
     decisionAttendance: { present: string[]; rawText: string };
     /** Counts printed in the vote phrase; -1 for a value the page does not count. */
@@ -157,7 +164,7 @@ interface LlmAttendanceChange {
     name: string;
     type: 'arrival' | 'departure' | 'absent_for_vote';
     anchor: {
-        kind: AttendanceAnchorKind;
+        kind: DocumentAnchorKind;
         agendaItemIndex: number;      // 0 when kind is not agenda_item
         outOfAgenda: boolean;
         decisionNumber: string;       // "" when not decision_number
@@ -189,7 +196,7 @@ function fromLlmChange(c: LlmAttendanceChange): AttendanceChange {
  * When the PDF uses "composition + absent" format, computes present = composition - absent
  * so the LLM doesn't have to do any subtraction.
  */
-function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
+export function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
     let presentMembers: string[];
     let absentMembers = raw.absentMembers || [];
 
@@ -223,6 +230,13 @@ function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
         absentMembers,
         mayorPresent: raw.mayorPresent,
         presidedBy: raw.presidedBy?.name ? raw.presidedBy : null,
+        actingSecretary: raw.actingSecretary?.name ? raw.actingSecretary : null,
+        // The heading is kept as a fact beside the number, not as a gate on it:
+        // nulling the number whenever the heading came back empty cost 15 correct
+        // numbers on the fixture (the reader takes the number from places it does
+        // not call a heading) and fixed none of the five invented ones.
+        subjectInfo: raw.subjectInfo,
+        subjectHeading: raw.subjectHeading?.trim() ?? '',
         voteTally,
         decisionAttendance: raw.decisionAttendance?.present?.length ? raw.decisionAttendance : null,
         decisionExcerpt: raw.decisionExcerpt,
@@ -232,7 +246,6 @@ function normalizeExtraction(raw: RawLlmExtraction): RawExtractedDecision {
         voteDetails: raw.voteDetails,
         attendanceChanges,
         discussionOrder: raw.discussionOrder,
-        subjectInfo: raw.subjectInfo,
         incomplete: raw.incomplete,
     };
 }
@@ -255,8 +268,11 @@ export interface RawExtractedDecision {
     subjectInfo: AgendaItemRef | null;
     incomplete: boolean;
     presidedBy: { name: string; rawText: string } | null;
+    actingSecretary: { name: string; rawText: string } | null;
+    /** The item heading as printed; "" when the page prints none, in which case subjectInfo is null. */
+    subjectHeading: string;
     voteTally: Record<VoteValue, number | null>;
-    /** The page's own list of who was present for this decision (ΤΑ ΜΕΛΗ / ΑΠΟΧΩΡΗΣΑΝΤΕΣ after the decision), never the opening roll call. */
+    /** The page's own list of who was present for this decision (ΤΑ ΜΕΛΗ after the decision), never the opening roll call. */
     decisionAttendance: { present: string[]; rawText: string } | null;
 }
 
@@ -304,14 +320,17 @@ Extract the following information from the PDF:
    - "agendaItemIndex": The subject/topic number (e.g., "ΘΕΜΑ 3ο" → 3, "1ο ΕΚΤΑΚΤΟ ΘΕΜΑ" → 1, "ΘΕΜΑ ΕΚΤΟΣ Η.Δ. 2ο" → 2)
    - "nonAgendaReason": "outOfAgenda" if this is an out-of-agenda/emergency item (ΕΚΤΑΚΤΟ ΘΕΜΑ, ΘΕΜΑ ΕΚΤΟΣ Η.Δ., etc.), null for regular agenda items (ΘΕΜΑ Η.Δ., τακτικό θέμα)
    - Return null if the subject/topic number cannot be determined. Return null when the page prints no item number for THIS decision; never infer one from position, from the decision number, or from a "1ο" in a heading that belongs to another item.
+   - "subjectHeading" (a separate top-level field): the heading you read the number from, exactly as printed («ΘΕΜΑ 3ο», «1ο ΕΚΤΑΚΤΟ ΘΕΜΑ», «ΘΕΜΑ ΕΚΤΟΣ Η.Δ. 2ο»). Return "" when there is no such heading — a decision that prints only «Αριθμός Απόφασης 129/2026» and calls its item «το παρακάτω θέμα» has no heading and no item number.
 13. **mayorPresent**: Whether the city mayor (Δήμαρχος/Δήμαρχο) was present at the session. This is usually stated in a narrative paragraph separate from the council member attendance list. Look for phrases like "Ο/Η Δήμαρχος ... προσκλήθηκε νομίμως και παρέστη" or "Ο/Η Δήμαρχος ... παρών/παρούσα" (present), or "Ο/Η Δήμαρχος ... δεν ήταν παρών/παρούσα" or "απουσίαζε" (absent). Return an object with "present" (boolean) and "rawText" (the original sentence from the PDF describing the mayor's presence/absence). Return null if mayor presence is not mentioned.
 14. **incomplete**: Set to true ONLY if the document appears physically truncated — i.e. you can see attendance lists and preamble but the decision section starting with "ΑΠΟΦΑΣΙΖΕΙ" is not present because the provided pages end before reaching it. Set to false if you can see the "ΑΠΟΦΑΣΙΖΕΙ" section, even if some fields within it (like the vote result phrase) are missing or unclear. Missing data in a complete document is a data quality issue, not truncation.
 
 15. **presidedBy**: When the page says someone presided over the session in place of the mayor or the president («ο Αντιπρόεδρος κ. Χ, ο οποίος προήδρευσε λόγω της απουσίας της Δημάρχου», «προεδρεύοντος του Αντιδημάρχου κ. Χ»), return {"name": the full name as printed, "rawText": the sentence}. Presiding means chairing the meeting (προήδρευσε, προεδρεύων, προεδρεύοντος). A deputy standing in for the absent mayor in the mayor's capacity («του Δημάρχου απουσιάζοντος και αναπληρούμενου από τον Αντιδήμαρχο κ. Χ») is NOT presiding unless the page also says he chaired; the session's usual president still presides. Otherwise {"name": "", "rawText": ""}.
 
-16. **voteTally**: The counts printed in the vote phrase, per value: FOR (υπέρ / θετικές ψήφοι), AGAINST (κατά / αρνητικές), ABSTAIN (λευκά), PRESENT (παρών), DID_NOT_VOTE (αποχή). Use -1 for every value the page does not count. «Κατά πλειοψηφία με 12 υπέρ και 3 κατά» → FOR 12, AGAINST 3, the rest -1. «Ομόφωνα» → all -1. Never count names yourself.
+16. **actingSecretary**: When the page says someone kept the minutes in the secretary's place («Η εκτελούσα χρέη Γραμματέα κα. Χ», «χρέη γραμματέα εκτέλεσε ο κ. Χ»), return {"name": the full name as printed, "rawText": the sentence}. Otherwise {"name": "", "rawText": ""}.
 
-17. **decisionAttendance**: Some bodies print, AFTER the decision text, the members present for THIS decision: a list headed ΤΑ ΜΕΛΗ / ΠΑΡΟΝΤΑ ΜΕΛΗ. Return {"present": the names in that list, "rawText": the heading and its first line}. A list of who had LEFT (ΑΠΟΧΩΡΗΣΑΝΤΕΣ) is not a present list: never put its names in "present". When the page prints no such list, return {"present": [], "rawText": ""}. Never copy the opening roll call (ΠΑΡΟΝΤΕΣ/ΣΥΝΘΕΣΗ at the top) here, and never remove anyone from presentMembers because of this list.
+17. **voteTally**: The counts printed in the vote phrase, per value: FOR (υπέρ / θετικές ψήφοι), AGAINST (κατά / αρνητικές), ABSTAIN (λευκά), PRESENT (παρών), DID_NOT_VOTE (αποχή). Use -1 for every value the page does not count. «Κατά πλειοψηφία με 12 υπέρ και 3 κατά» → FOR 12, AGAINST 3, the rest -1. «Ομόφωνα» → all -1. Never count names yourself.
+
+18. **decisionAttendance**: Some bodies print, AFTER the decision text, the members present for THIS decision: a list headed ΤΑ ΜΕΛΗ / ΠΑΡΟΝΤΑ ΜΕΛΗ. Return {"present": the names in that list, "rawText": the heading and its first line}. A list of who had LEFT (ΑΠΟΧΩΡΗΣΑΝΤΕΣ) is not a present list: never put its names in "present". When the page prints no such list, return {"present": [], "rawText": ""}. Never copy the opening roll call (ΠΑΡΟΝΤΕΣ/ΣΥΝΘΕΣΗ at the top) here, and never remove anyone from presentMembers because of this list.
 
 If a field cannot be found, use empty array for lists, empty string for text, and null where indicated.`;
 // The output shape itself is not described here — it is enforced by
@@ -741,6 +760,13 @@ const EXTRACTION_OUTPUT_SCHEMA = {
             required: ['name', 'rawText'],
             additionalProperties: false,
         },
+        actingSecretary: {
+            type: 'object',
+            properties: { name: { type: 'string' }, rawText: { type: 'string' } },
+            required: ['name', 'rawText'],
+            additionalProperties: false,
+        },
+        subjectHeading: { type: 'string' },
         decisionAttendance: {
             type: 'object',
             properties: { present: { type: 'array', items: { type: 'string' } }, rawText: { type: 'string' } },
@@ -758,7 +784,7 @@ const EXTRACTION_OUTPUT_SCHEMA = {
         'attendanceFormat', 'compositionMembers', 'presentMembers', 'absentMembers',
         'mayorPresent', 'decisionExcerpt', 'decisionNumber', 'references',
         'voteResult', 'voteDetails', 'attendanceChanges', 'discussionOrder',
-        'subjectInfo', 'incomplete', 'presidedBy', 'voteTally', 'decisionAttendance',
+        'subjectInfo', 'incomplete', 'presidedBy', 'actingSecretary', 'subjectHeading', 'voteTally', 'decisionAttendance',
     ],
     additionalProperties: false,
 };
@@ -791,18 +817,29 @@ function reachedTheDecision(result: RawExtractedDecision): boolean {
  * A later window of a long document may hold the named vote lists the decision
  * window did not (Vrilissia 8/12: ΑΠΟΦΑΣΙΖΕΙ on page 27, the nineteen ΥΠΕΡ and
  * eight «παρών» names on page 37). They are adopted only when they are the same
- * vote: the decision window names nobody in favour and printed a count that the
- * candidate's named ΥΠΕΡ list matches exactly. An embedded decision of another
- * body (its own count, its own names) never matches and is left where it is.
+ * vote: the decision window names nobody in favour and printed a count of at
+ * least one that the candidate's named ΥΠΕΡ list matches exactly. An embedded
+ * decision of another body (its own count, its own names) never matches and is
+ * left where it is.
+ *
+ * The names are added to the decision window's own rows, not substituted for
+ * them. The window that names nobody in favour can still name a dissenter, and
+ * replacing the list would drop that person unless the later window happened to
+ * reprint them — turning a stated AGAINST into an inferred FOR.
  */
 export function adoptLaterVoteNames(winner: RawExtractedDecision, later: RawExtractedDecision[]): RawExtractedDecision {
     const printedFor = winner.voteTally?.FOR ?? null;
     const winnerNamesFor = winner.voteDetails.some(v => v.vote === 'FOR');
-    if (printedFor == null || winnerNamesFor) return winner;
+    // A printed zero would be matched by the first later window that names
+    // nobody in favour, whatever else that window holds.
+    if (printedFor == null || printedFor < 1 || winnerNamesFor) return winner;
+    const ownNames = winner.voteDetails.map(v => v.name);
     for (const w of later) {
         const namedFor = w.voteDetails.filter(v => v.vote === 'FOR').length;
         const sameCount = w.voteTally?.FOR == null || w.voteTally.FOR === printedFor;
-        if (namedFor === printedFor && sameCount) return { ...winner, voteDetails: w.voteDetails };
+        if (namedFor !== printedFor || !sameCount) continue;
+        const adopted = w.voteDetails.filter(v => !greekNameInList(v.name, ownNames));
+        return { ...winner, voteDetails: [...winner.voteDetails, ...adopted] };
     }
     return winner;
 }
@@ -816,14 +853,33 @@ function hasCountedTally(tally: RawExtractedDecision['voteTally'] | undefined): 
  * Bumped whenever the prompt or the output schema changes what a reading means,
  * so a reading in the old shape is never served to code expecting the new one.
  * v4 retired the `clock_time` and `session_phase` anchor kinds and the free-text
- * `phase` that came with them.
+ * `phase` that came with them. v5 read the item heading and the acting
+ * secretary, and nulled the item number when the heading came back empty; v6
+ * keeps the number — the cache holds the normalised result, so the readings
+ * v5 nulled had to be retired with it. v7 keys the cache on the mayor name as
+ * well; a v6 entry cannot be told apart, because a caller that named the mayor
+ * and a caller that did not wrote to the same key.
  */
-export const EXTRACTION_SCHEMA_VERSION = 4;
+export const EXTRACTION_SCHEMA_VERSION = 7;
 
-/** The cache key. Hints change what comes back, so a hinted read is cached apart from a plain one. */
-export function extractionCacheKey(pdfUrl: string, hints?: string): string {
+/** Everything besides the document that steers a reading, and so has to key its cache entry. */
+export interface ExtractionSteering {
+    /** Steers mayorPresent and presidedBy: the prompt appends "The city mayor is: …". */
+    mayorName?: string;
+    /** The body's conventions, appended to the prompt verbatim. */
+    hints?: string;
+}
+
+/**
+ * The cache key. Two callers read the same document with different steering —
+ * `pollDecisions` names the mayor, the scorer does not — so the steering is part
+ * of the key. Without it, whichever ran first owned the entry both read.
+ */
+export function extractionCacheKey(pdfUrl: string, steering?: ExtractionSteering): string {
     const versioned = `${pdfUrl}#v${EXTRACTION_SCHEMA_VERSION}`;
-    return hints ? `${versioned}#${crypto.createHash('sha256').update(hints).digest('hex').slice(0, 8)}` : versioned;
+    const parts = [steering?.mayorName, steering?.hints].filter(Boolean);
+    if (parts.length === 0) return versioned;
+    return `${versioned}#${crypto.createHash('sha256').update(parts.join('\n')).digest('hex').slice(0, 8)}`;
 }
 
 /** A phase as the retired `session_phase` anchor stated it: the block as the page printed it. */
@@ -859,6 +915,9 @@ export function withDefaults(raw: RawExtractedDecision): RawExtractedDecision {
         attendanceFormat: r.attendanceFormat ?? 'explicit_present_absent',
         compositionMembers: r.compositionMembers ?? null,
         presidedBy: r.presidedBy?.name ? r.presidedBy : null,
+        actingSecretary: r.actingSecretary?.name ? r.actingSecretary : null,
+        // A reading cached before the heading was read keeps its subjectInfo: "" here means "not read", not "no heading".
+        subjectHeading: r.subjectHeading ?? '',
         voteTally: r.voteTally ?? { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
         decisionAttendance: r.decisionAttendance?.present?.length ? r.decisionAttendance : null,
         attendanceChanges: (r.attendanceChanges ?? []).map(c => c.anchor ? { ...c, anchor: migrateAnchor(c.anchor) } : c),
@@ -866,7 +925,7 @@ export function withDefaults(raw: RawExtractedDecision): RawExtractedDecision {
 }
 
 export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string, skipCache?: boolean, hints?: string): Promise<ResultWithUsage<RawExtractedDecision> & { fromCache: boolean }> {
-    const cacheKey = extractionCacheKey(pdfUrl, hints);
+    const cacheKey = extractionCacheKey(pdfUrl, { mayorName, hints });
     if (!skipCache) {
         const cached = readCache<RawExtractedDecision>(cacheKey);
         if (cached) return { result: withDefaults(cached), usage: { ...NO_USAGE }, fromCache: true };
@@ -992,11 +1051,13 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
                 attendanceFormat: tailSawRollCall ? tailResult.attendanceFormat : lastFrontResult!.attendanceFormat,
                 compositionMembers: tailSawRollCall ? tailResult.compositionMembers : lastFrontResult!.compositionMembers,
                 presidedBy: tailResult.presidedBy ?? lastFrontResult!.presidedBy,
+                actingSecretary: tailResult.actingSecretary ?? lastFrontResult!.actingSecretary,
+                subjectHeading: tailResult.subjectHeading || lastFrontResult!.subjectHeading,
                 voteTally: hasCountedTally(tailResult.voteTally) ? tailResult.voteTally : lastFrontResult!.voteTally,
                 decisionAttendance: tailResult.decisionAttendance ?? lastFrontResult!.decisionAttendance,
             };
             const withNames = adoptLaterVoteNames(merged, laterWindows);
-            if (withNames !== merged) console.log(`  Named votes adopted from a later window (${withNames.voteDetails.length} names match the printed count)`);
+            if (withNames !== merged) console.log(`  Named votes adopted from a later window (${withNames.voteDetails.length - merged.voteDetails.length} names added to ${merged.voteDetails.length} already read)`);
             console.log(`  Extraction complete from pages ${windowStart + 1}-${windowEnd} (merged with front-page attendance)`);
             writeCache(cacheKey, withNames);
             return { result: withNames, usage: totalUsage, fromCache: false };

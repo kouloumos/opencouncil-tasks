@@ -506,7 +506,11 @@ export interface ExtractedDecisionResult {
     mayorPresent: { present: boolean; rawText: string } | null;
     /** Who presided when the page says someone did in the mayor's or president's place. */
     presidedBy: { name: string; personId: string | null; rawText: string } | null;
-    /** The page's own list of who was present for THIS decision (ΤΑ ΜΕΛΗ / ΑΠΟΧΩΡΗΣΑΝΤΕΣ after the decision text), with ids; null when the page prints none. Never the opening roll call. */
+    /** Who kept the minutes in the secretary's place, when the page says so; bodies whose ΤΑ ΜΕΛΗ leaves the secretary out leave the acting one out too. */
+    actingSecretary: { name: string; personId: string | null; rawText: string } | null;
+    /** The item heading as printed; "" when the page prints none, and then subjectInfo is null. */
+    subjectHeading: string;
+    /** The page's own list of who was present for THIS decision (ΤΑ ΜΕΛΗ after the decision text; an ΑΠΟΧΩΡΗΣΑΝΤΕΣ column is departures, never this), with ids; null when the page prints none. Never the opening roll call. */
     decisionAttendance: { present: string[]; presentIds: string[]; rawText: string } | null;
     voteResult: string | null;
     /** Counts printed in the phrase, per vote value; null when not printed. */

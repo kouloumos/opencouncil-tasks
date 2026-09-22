@@ -34,7 +34,7 @@ const got = (over: Partial<RawExtractedDecision> = {}): RawExtractedDecision => 
     discussionOrder: null,
     subjectInfo: null,
     incomplete: false,
-    presidedBy: null,
+    presidedBy: null, actingSecretary: null, subjectHeading: '',
     voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
     decisionAttendance: null,
     ...over,

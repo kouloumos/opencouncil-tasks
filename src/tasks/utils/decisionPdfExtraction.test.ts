@@ -76,9 +76,9 @@ import {
     greekNameInList,
     withDefaults,
     extractionCacheKey,
-    EXTRACTION_SCHEMA_VERSION, adoptLaterVoteNames } from './decisionPdfExtraction.js';
+    EXTRACTION_SCHEMA_VERSION, adoptLaterVoteNames, normalizeExtraction } from './decisionPdfExtraction.js';
 import type { RawExtractedDecision, AttendanceAnchor } from './decisionPdfExtraction.js';
-import type { AttendanceAnchorKind as WireAnchorKind, AttendancePhase as WirePhase } from '../../types.js';
+import type { AttendanceAnchorKind, AttendancePhase } from '../../types.js';
 
 const noUsage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
 
@@ -424,6 +424,25 @@ describe('matchAllMembers', () => {
 
 // --- cached-reading migration ---
 
+describe('normalizeExtraction', () => {
+    const llm = (over: Partial<Parameters<typeof normalizeExtraction>[0]>) => normalizeExtraction({
+        attendanceFormat: 'explicit_present_absent', compositionMembers: [], presentMembers: [], absentMembers: [], mayorPresent: false,
+        decisionExcerpt: '', decisionNumber: '', references: '', voteResult: '', voteDetails: [], attendanceChanges: [], discussionOrder: null,
+        subjectInfo: { agendaItemIndex: 1, nonAgendaReason: null }, incomplete: false, presidedBy: { name: '', rawText: '' },
+        actingSecretary: { name: '', rawText: '' }, subjectHeading: '', decisionAttendance: { present: [], rawText: '' },
+        voteTally: { FOR: -1, AGAINST: -1, ABSTAIN: -1, PRESENT: -1, DID_NOT_VOTE: -1 }, ...over,
+    } as Parameters<typeof normalizeExtraction>[0]);
+    it('keeps the heading beside the number without gating the number on it', () => {
+        // The reader takes the number from places it does not call a heading; an empty heading is not evidence of no number.
+        expect(llm({ subjectHeading: '' }).subjectInfo).toEqual({ agendaItemIndex: 1, nonAgendaReason: null });
+        expect(llm({ subjectHeading: 'ΘΕΜΑ 3ο', subjectInfo: { agendaItemIndex: 3, nonAgendaReason: null } })).toMatchObject({ subjectHeading: 'ΘΕΜΑ 3ο', subjectInfo: { agendaItemIndex: 3 } });
+    });
+    it('keeps the acting secretary only when the page names one', () => {
+        expect(llm({}).actingSecretary).toBeNull();
+        expect(llm({ actingSecretary: { name: 'Αικατερίνη Γκούμα', rawText: 'Η εκτελούσα χρέη Γραμματέα Αικατερίνη Γκούμα' } }).actingSecretary?.name).toBe('Αικατερίνη Γκούμα');
+    });
+});
+
 describe('extractionCacheKey', () => {
     it('versions the key, so a reading written by an older prompt is never found', () => {
         expect(extractionCacheKey('https://example.com/a.pdf')).toBe(`https://example.com/a.pdf#v${EXTRACTION_SCHEMA_VERSION}`);
@@ -432,15 +451,28 @@ describe('extractionCacheKey', () => {
 
     it('keeps a hinted reading apart from a plain one, both under the version', () => {
         const plain = extractionCacheKey('https://example.com/a.pdf');
-        const hinted = extractionCacheKey('https://example.com/a.pdf', 'the body prints ΣΥΝΘΕΣΗ');
+        const hinted = extractionCacheKey('https://example.com/a.pdf', { hints: 'the body prints ΣΥΝΘΕΣΗ' });
         expect(hinted).not.toBe(plain);
         expect(hinted.startsWith(`${plain}#`)).toBe(true);
+    });
+
+    // pollDecisions names the mayor and the scorer does not. Sharing a key meant
+    // whichever ran first owned the entry both read, and the name steers
+    // mayorPresent and presidedBy.
+    it('keeps a reading steered by a mayor name apart from every other', () => {
+        const url = 'https://example.com/a.pdf';
+        const plain = extractionCacheKey(url);
+        const withMayor = extractionCacheKey(url, { mayorName: 'Μαρία Μ' });
+        const otherMayor = extractionCacheKey(url, { mayorName: 'Γιώργος Γ' });
+        const mayorAndHints = extractionCacheKey(url, { mayorName: 'Μαρία Μ', hints: 'ΣΥΝΘΕΣΗ' });
+
+        expect(new Set([plain, withMayor, otherMayor, mayorAndHints]).size).toBe(4);
     });
 });
 
 describe('withDefaults', () => {
-    const WIRE_KINDS: WireAnchorKind[] = ['agenda_item', 'decision_number', 'subject', 'phase', 'session_start', 'session_end'];
-    const WIRE_PHASES: (WirePhase | null)[] = ['pre_agenda', 'out_of_agenda', null];
+    const WIRE_KINDS: AttendanceAnchorKind[] = ['agenda_item', 'decision_number', 'subject', 'phase', 'session_start', 'session_end'];
+    const WIRE_PHASES: (AttendancePhase | null)[] = ['pre_agenda', 'out_of_agenda', null];
 
     const cachedWithAnchor = (anchor: Record<string, unknown>) => ({
         attendanceChanges: [{ name: 'Α Β', type: 'departure', agendaItem: null, timing: null, anchor, rawText: 'x' }],
@@ -493,7 +525,7 @@ describe('withDefaults', () => {
         expect(withDefaults(bare)).toMatchObject({
             attendanceFormat: 'explicit_present_absent',
             compositionMembers: null,
-            presidedBy: null,
+            presidedBy: null, actingSecretary: null, subjectHeading: '',
             voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
             decisionAttendance: null,
         });
@@ -531,7 +563,7 @@ describe('extractDecisionFromPdf', () => {
 
         const { result, usage } = await extractDecisionFromPdf('https://example.com/test-unique-extraction-url.pdf');
 
-        expect(result).toMatchObject({ ...mockResult, attendanceChanges: [], presidedBy: null });
+        expect(result).toMatchObject({ ...mockResult, attendanceChanges: [], presidedBy: null, actingSecretary: null, subjectHeading: '' });
         expect(usage).toEqual({ input_tokens: 100, output_tokens: 50 });
         expect(mockAiChat).toHaveBeenCalledOnce();
         expect(fetchSpy).toHaveBeenCalledWith('https://example.com/test-unique-extraction-url.pdf');
@@ -741,7 +773,7 @@ describe('extractDecisionFromPdf', () => {
 
 describe('adoptLaterVoteNames', () => {
     const base = { attendanceFormat: 'explicit_present_absent' as const, compositionMembers: null, presentMembers: [], absentMembers: [], mayorPresent: null, decisionExcerpt: 'x',
-        decisionNumber: null, references: '', attendanceChanges: [], discussionOrder: null, subjectInfo: null, incomplete: false, presidedBy: null, decisionAttendance: null };
+        decisionNumber: null, references: '', attendanceChanges: [], discussionOrder: null, subjectInfo: null, incomplete: false, presidedBy: null, actingSecretary: null, subjectHeading: '', decisionAttendance: null };
     const tally = (FOR: number | null) => ({ FOR, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null });
     const names = (n: number, vote: 'FOR' | 'PRESENT') => Array.from({ length: n }, (_, i) => ({ name: `${vote} ${i}`, vote }));
     it('adopts the names of a later window whose ΥΠΕΡ count equals the printed one', () => {
@@ -757,6 +789,31 @@ describe('adoptLaterVoteNames', () => {
     it('does nothing when the decision window already names voters or printed no count', () => {
         const named = { ...base, voteResult: 'Ομόφωνα', voteTally: tally(null), voteDetails: names(3, 'FOR') };
         expect(adoptLaterVoteNames(named, [{ ...base, voteResult: null, voteTally: tally(null), voteDetails: names(3, 'FOR') }])).toBe(named);
+    });
+    it('keeps a named dissenter the later window does not reprint', () => {
+        const winner = { ...base, voteResult: 'Με δεκαεννέα (19) θετικές ψήφους και μία (1) κατά', voteTally: tally(19),
+            voteDetails: [{ name: 'Χρήστος Χ', vote: 'AGAINST' as const }] };
+        const later = { ...base, voteResult: null, voteTally: tally(null), voteDetails: names(19, 'FOR') };
+
+        const merged = adoptLaterVoteNames(winner, [later]).voteDetails;
+        expect(merged).toContainEqual({ name: 'Χρήστος Χ', vote: 'AGAINST' });
+        expect(merged.filter(v => v.vote === 'FOR')).toHaveLength(19);
+    });
+    it('keeps its own row when the later window names the same person differently', () => {
+        const winner = { ...base, voteResult: 'Με δύο (2) θετικές ψήφους', voteTally: tally(2),
+            voteDetails: [{ name: 'Χαμντί Ντάφερ', vote: 'AGAINST' as const }] };
+        const later = { ...base, voteResult: null, voteTally: tally(null),
+            voteDetails: [{ name: 'Χαμντί Ντ.', vote: 'FOR' as const }, { name: 'Λυδία Βέρα', vote: 'FOR' as const }] };
+
+        expect(adoptLaterVoteNames(winner, [later]).voteDetails).toEqual([
+            { name: 'Χαμντί Ντάφερ', vote: 'AGAINST' },
+            { name: 'Λυδία Βέρα', vote: 'FOR' },
+        ]);
+    });
+    it('does not treat a printed zero as a count any window can match', () => {
+        const winner = { ...base, voteResult: 'Απορρίπτεται', voteTally: tally(0), voteDetails: [] };
+        const unrelated = { ...base, voteResult: null, voteTally: tally(null), voteDetails: names(4, 'PRESENT') };
+        expect(adoptLaterVoteNames(winner, [unrelated])).toBe(winner);
     });
 });
 

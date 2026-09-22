@@ -190,6 +190,7 @@ app.post('/pollDecisions', taskManager.registerTask(pollDecisions, {
   summary: 'Poll and extract decisions from Diavgeia',
   description: 'Fetch decisions from the Greek Government Transparency portal, match them to meeting subjects, and extract structured data (excerpt, attendance, votes) from matched PDFs',
   // 4: per-document facts only (roll call as printed, named votes, changes with anchors), no replayed snapshots; per-vote absence as an event pair (2026-09-17)
+  //    + actingSecretary and subjectHeading, both additive (2026-09-22); v4 has not shipped, so no bump
   version: 4,
 }));
 

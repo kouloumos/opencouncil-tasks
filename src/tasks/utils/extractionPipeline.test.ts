@@ -48,7 +48,7 @@ function makeRaw(overrides: Partial<RawExtractedDecision> = {}): RawExtractedDec
         incomplete: false,
         attendanceFormat: 'explicit_present_absent',
         compositionMembers: null,
-        presidedBy: null,
+        presidedBy: null, actingSecretary: null, subjectHeading: '',
         decisionAttendance: null,
         voteTally: { FOR: null, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null },
         ...overrides,
@@ -248,6 +248,22 @@ describe('extractDecisionsFromPdfs — names from the per-decision list and the 
         expect(result.decisions[0].decisionAttendance?.presentIds).toEqual(['p1']);
         expect(result.decisions[0].presidedBy?.personId).toBe('p2');
         expect(result.decisions[0].unmatchedMembers).toEqual([]);
+    });
+
+    // Whoever keeps the minutes need not be a member: in Argithea a municipal
+    // employee does, and is on no roster. Counting that name as an unmatched
+    // member would raise UNMATCHED_NAME on every page of such a body. The name
+    // still travels as `actingSecretary`, with no person id.
+    it('does not report an acting secretary who matches nobody as an unmatched member', async () => {
+        mockMatchPersonByName.mockImplementation((name: string, people: PersonForMatching[]) => people.find(p => p.name === name)?.id ?? null);
+        mockLlmMatchMembers.mockResolvedValue({ matched: [], stillUnmatched: ['Ελένη Ξ'], usage: noUsage });
+        mockExtractDecisionFromPdf.mockResolvedValueOnce({
+            result: makeRaw({ actingSecretary: { name: 'Ελένη Ξ', rawText: 'εκτελούσα χρέη Γραμματέα' } }),
+            usage: noUsage, fromCache: false,
+        });
+        const result = await extractDecisionsFromPdfs([makeSubject()], people, noopProgress);
+        expect(result.decisions[0].unmatchedMembers).toEqual([]);
+        expect(result.decisions[0].actingSecretary).toEqual(expect.objectContaining({ name: 'Ελένη Ξ', personId: null }));
     });
 });
 

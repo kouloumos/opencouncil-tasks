@@ -138,6 +138,7 @@ export async function extractDecisionsFromPdfs(
         for (const change of raw.attendanceChanges || []) allRawNames.add(change.name);
         for (const name of raw.decisionAttendance?.present ?? []) allRawNames.add(name);
         if (raw.presidedBy?.name) allRawNames.add(raw.presidedBy.name);
+        if (raw.actingSecretary?.name) allRawNames.add(raw.actingSecretary.name);
     }
 
     // Step 1: Token-sort matching — build name→personId map
@@ -293,6 +294,9 @@ export async function extractDecisionsFromPdfs(
     const ids = (names: string[]) => [...new Set(names.map(resolve).filter((id): id is string => !!id))];
 
     for (const { subjectId, raw, fromCache } of extractions) {
+        // The members the page names. Whoever kept the minutes is left out: the matcher
+        // still tries the name (allRawNames), but it may be an employee on no roster
+        // (Argithea), and an unmatched member would then be reported on every page.
         const namedOnPage = [...raw.presentMembers, ...raw.absentMembers, ...raw.voteDetails.map(v => v.name), ...raw.attendanceChanges.map(c => c.name), ...(raw.decisionAttendance?.present ?? []), ...(raw.presidedBy?.name ? [raw.presidedBy.name] : [])];
         const unmatchedMembers = [...new Set(namedOnPage.filter(n => !resolve(n)))];
         // A page that names the same councillor twice — once in the dissenting
@@ -309,6 +313,9 @@ export async function extractDecisionsFromPdfs(
         attendanceEvents.push(...attendanceChanges.filter(e => e.anchor.kind === 'subject'));
         const presidedBy = raw.presidedBy
             ? { name: raw.presidedBy.name, personId: resolve(raw.presidedBy.name) ?? matchPersonByName(raw.presidedBy.name, people), rawText: raw.presidedBy.rawText }
+            : null;
+        const actingSecretary = raw.actingSecretary
+            ? { name: raw.actingSecretary.name, personId: resolve(raw.actingSecretary.name) ?? matchPersonByName(raw.actingSecretary.name, people), rawText: raw.actingSecretary.rawText }
             : null;
         const warnings = [...validateRawExtraction(raw), ...validateProcessedDecision({ voteResult: raw.voteResult, voteDetails: voteDetails.map(v => ({ vote: v.vote })) })];
 
@@ -331,6 +338,8 @@ export async function extractDecisionsFromPdfs(
             },
             mayorPresent: raw.mayorPresent,
             presidedBy,
+            actingSecretary,
+            subjectHeading: raw.subjectHeading,
             decisionAttendance: raw.decisionAttendance ? { present: raw.decisionAttendance.present, presentIds: ids(raw.decisionAttendance.present), rawText: raw.decisionAttendance.rawText } : null,
             voteResult: raw.voteResult || null,
             voteTally: raw.voteTally,
