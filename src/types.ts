@@ -333,7 +333,9 @@ export interface SummarizeRequest extends RequestOnTranscript {
      *  RequestOnTranscript — fixTranscript never geocodes. */
     country?: CountryCode;
     requestedSubjects: string[];
-    existingSubjects: Subject[];
+    /** The app's stored subjects. `id` is the database id when the app sends one
+     *  (issue 366); older apps send none, and the compressor hashes one instead. */
+    existingSubjects: Array<Omit<Subject, 'id'> & { id?: string }>;
     additionalInstructions?: string;
 }
 
