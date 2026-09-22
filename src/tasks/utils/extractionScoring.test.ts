@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
 import {
-    scoreRollCall, scoreAttendanceChanges, scorePerVoteAbsence, scoreVotes, scoreSubject, scoreExcerpt, scoreMayor, tallyScores, scoreDocument,
-    type ExtractionLabel,
+    scoreRollCall, scoreAttendanceChanges, scorePerVoteAbsence, scoreVotes, scoreSubject, scoreExcerpt, scoreMayor, scorePresidedBy, scoreDecisionAttendance, tallyScores, scoreDocument,
+    STORED_LABEL_ANCHORS,
+    type ExtractionLabel, type StoredLabelAnchor,
 } from './extractionScoring.js';
 import type { RawExtractedDecision } from './decisionPdfExtraction.js';
 
@@ -38,12 +40,12 @@ describe('scoreRollCall', () => {
 describe('scoreAttendanceChanges', () => {
     const departure = { name: 'Κορλού Όλγα', type: 'departure' as const, agendaItem: { agendaItemIndex: 5, nonAgendaReason: null }, timing: 'after' as const };
     it('treats the anchor as part of the fact', () => {
-        const label: ExtractionLabel['attendanceChanges'] = { stated: true, asExtracted: [departure], verified: 'agreed' };
+        const label: ExtractionLabel['attendanceChanges'] = { stated: true, anchoredBy: 'agenda_item', asExtracted: [departure], verified: 'agreed' };
         const during = extraction({ attendanceChanges: [{ ...departure, timing: 'during', rawText: '' }] });
         expect(scoreAttendanceChanges(label, during).outcome).toBe('disagree');
     });
     it('reports a stated change the extractor returned nothing for as missing', () => {
-        const label: ExtractionLabel['attendanceChanges'] = { stated: true, asExtracted: [departure], verified: 'agreed' };
+        const label: ExtractionLabel['attendanceChanges'] = { stated: true, anchoredBy: 'agenda_item', asExtracted: [departure], verified: 'agreed' };
         expect(scoreAttendanceChanges(label, extraction()).outcome).toBe('missing');
     });
 });
@@ -65,7 +67,7 @@ describe('anchors and per-vote absence', () => {
         const got = extraction({ attendanceChanges: [{ name: 'Γεώργιος Ρεμούνδος', type: 'absent_for_vote', agendaItem: null, timing: null, rawText: '' }] });
         expect(scorePerVoteAbsence(label, got).outcome).toBe('agree');
         expect(scorePerVoteAbsence(label, extraction()).outcome).toBe('missing');
-        expect(scoreAttendanceChanges({ stated: false, asExtracted: [], verified: true }, got).outcome).toBe('agree');
+        expect(scoreAttendanceChanges({ stated: false, verified: true }, got).outcome).toBe('agree');
     });
 });
 
@@ -139,7 +141,7 @@ describe('tallyScores', () => {
     it('counts per field, not per document', () => {
         const label: ExtractionLabel = {
             rollCall: { presentMembers: ['Α Β'], absentMembers: [], verified: 'agreed' },
-            attendanceChanges: { stated: false, asExtracted: [], verified: 'agreed' },
+            attendanceChanges: { stated: false, verified: 'agreed' },
             votes: { phraseAsPrinted: 'Ομόφωνα', carriesTally: false, namedVoters: 'none', asExtracted: [], verified: false },
             subject: { agendaItemNumber: 3, isOutOfAgenda: false, verified: 'agreed' },
             excerpt: { chars: 10, extractionFlaggedIncomplete: false, verified: 'baseline' },
@@ -149,6 +151,36 @@ describe('tallyScores', () => {
         expect(t.rollCall.agree).toBe(1);
         expect(t.votes.contested).toBe(1);
         expect(t.subject.disagree).toBe(1);
+    });
+});
+
+describe('scorePresidedBy', () => {
+    it('is unlabelled until a page was reviewed for it', () => {
+        expect(scorePresidedBy(undefined, extraction()).outcome).toBe('unlabelled');
+    });
+    it('a page naming nobody agrees only with an empty reading', () => {
+        expect(scorePresidedBy({ name: null, verified: true }, extraction()).outcome).toBe('agree');
+        // Argos 99ΣΔΩΨΔ-4ΗΚ: the deputy mayor stood in for the mayor; the reader once called that presiding.
+        expect(scorePresidedBy({ name: null, verified: true }, extraction({ presidedBy: { name: 'Παναγιώτης Καμπόσος', rawText: '' } })).outcome).toBe('disagree');
+    });
+    it('matches the chair through case and name order', () => {
+        const got = extraction({ presidedBy: { name: 'ΜΕΤΙΚΑΡΙΔΗΣ ΘΕΟΔΩΡΟΣ', rawText: '' } });
+        expect(scorePresidedBy({ name: 'Θεόδωρος Μετικαρίδης', verified: true }, got).outcome).toBe('agree');
+        expect(scorePresidedBy({ name: 'Τίνα Καφατσάκη', verified: true }, extraction()).outcome).toBe('missing');
+    });
+});
+
+describe('scoreDecisionAttendance', () => {
+    it('a page with no list agrees only with an empty reading', () => {
+        expect(scoreDecisionAttendance({ members: null, verified: true }, extraction()).outcome).toBe('agree');
+        expect(scoreDecisionAttendance({ members: null, verified: true }, extraction({ decisionAttendance: { present: ['Α Β'], rawText: '' } })).outcome).toBe('disagree');
+    });
+    it('compares the list as a set of names and says who differs', () => {
+        const label = { members: ['Α Β', 'Γ Δ'], verified: true as const };
+        expect(scoreDecisionAttendance(label, extraction({ decisionAttendance: { present: ['Γ Δ', 'Α Β'], rawText: '' } })).outcome).toBe('agree');
+        const s = scoreDecisionAttendance(label, extraction({ decisionAttendance: { present: ['Α Β', 'Ε Ζ'], rawText: '' } }));
+        expect(s.outcome).toBe('disagree'); expect(s.detail).toContain('γ δ'); expect(s.detail).toContain('ε ζ');
+        expect(scoreDecisionAttendance(label, extraction()).outcome).toBe('missing');
     });
 });
 
@@ -163,7 +195,7 @@ describe('scoreMayor', () => {
         expect(scoreMayor({ present: true, verified: 'agreed' }, got)).toEqual({ outcome: 'disagree', detail: 'page present, extracted absent' });
     });
     it('a legacy session_phase label scores a phase anchor as agreeing', () => {
-        const label = { stated: true, anchoredBy: 'session_phase', verified: 'agreed' as const,
+        const label: ExtractionLabel['attendanceChanges'] = { stated: true, anchoredBy: 'session_phase', verified: 'agreed',
             asExtracted: [{ name: 'Λυδία Βέρα', type: 'arrival' as const, agendaItem: null, timing: null }] };
         const got = extraction({ attendanceChanges: [{ name: 'Λυδία Βέρα', type: 'arrival', agendaItem: null, timing: null, rawText: '',
             anchor: { kind: 'phase', agendaItem: null, decisionNumber: null, phase: 'pre_agenda', timing: null } }] });
@@ -176,5 +208,30 @@ describe('scoreVotes with a structured tally', () => {
         const label = { phraseAsPrinted: 'Εγκρίνεται με ΥΠΕΡ: 10 ψήφους', carriesTally: true, namedVoters: 'none' as const, asExtracted: [], verified: 'agreed' as const };
         const got = extraction({ voteResult: 'ΟΜΟΦΩΝΑ', voteTally: { FOR: 10, AGAINST: null, ABSTAIN: null, PRESENT: null, DID_NOT_VOTE: null } });
         expect(scoreVotes(label, got).outcome).toBe('agree');
+    });
+});
+
+// ===========================================================================
+// The fixture is the scorer's only ground truth, and the label type disciplines
+// the TypeScript that reads it, never the JSON on disk. The shapes it forbids
+// are the ones that used to score a weaker comparison in silence: a label
+// saying the page records no change while listing some had its list compared
+// anyway, because no scorer read `stated`.
+// ===========================================================================
+
+describe('fixtures/extraction-golden.json', () => {
+    const labels = (JSON.parse(readFileSync('fixtures/extraction-golden.json', 'utf-8')) as {
+        cities: Array<{ cityId: string; bodies: Array<{ documents?: Array<{ ada: string; extraction: ExtractionLabel }> }> }>;
+    }).cities.flatMap(c => c.bodies.flatMap(b => (b.documents ?? []).map(d => ({ where: `${c.cityId}/${d.ada}`, ac: d.extraction.attendanceChanges }))));
+
+    it('holds the labels the measurement reports on', () => {
+        expect(labels.length).toBeGreaterThan(100);
+    });
+
+    it('carries an anchor and a list exactly when it says the page states a change', () => {
+        const wrong = labels.filter(({ ac }) => ac.stated
+            ? !STORED_LABEL_ANCHORS.includes(ac.anchoredBy as StoredLabelAnchor) || !Array.isArray(ac.asExtracted)
+            : ac.anchoredBy !== undefined || ac.asExtracted !== undefined);
+        expect(wrong.map(l => l.where)).toEqual([]);
     });
 });

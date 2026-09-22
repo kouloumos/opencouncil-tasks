@@ -45,6 +45,13 @@ DOUBTS = {
     "no decision text": ["excerpt"], "flagged truncated": ["excerpt"],
 }
 
+# The label's anchor vocabulary is the reader's, not the survey's. The reader
+# spells session_phase as phase, and it keeps no clock-time anchor at all: a
+# printed time is never an anchor, so such a change carries no reference the
+# label can compare.
+LABEL_ANCHOR = {"session_phase": "phase", "clock_time": "nothing"}
+
+
 def seed(ada):
     """One document's extraction labels, seeded from the two readings."""
     r = gap[ada]
@@ -63,13 +70,20 @@ def seed(ada):
             "absentMembers": e.get("absentMembers") or [],
             "verified": v("rollCall"),
         },
+        # A label either says the page records no change, and then carries neither
+        # an anchor nor a list, or says it records some and carries both. The
+        # survey's pinning is null exactly when it saw no change, so a stated
+        # label that has no pinning states its change in prose: "nothing".
         "attendanceChanges": {
-            "stated": o["attendanceChangesStated"],
-            "anchoredBy": o["attendanceChangePinnedTo"],
+            "stated": True,
+            "anchoredBy": LABEL_ANCHOR.get(o["attendanceChangePinnedTo"], o["attendanceChangePinnedTo"] or "nothing"),
             "asExtracted": [{"name": c.get("name"), "type": c.get("type"),
                              "agendaItem": c.get("agendaItem"), "timing": c.get("timing"),
                              "rawText": c.get("rawText")}
                             for c in (e.get("attendanceChanges") or [])],
+            "verified": v("attendanceChanges"),
+        } if o["attendanceChangesStated"] else {
+            "stated": False,
             "verified": v("attendanceChanges"),
         },
         "votes": {

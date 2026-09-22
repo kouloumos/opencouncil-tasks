@@ -12,7 +12,7 @@ import type { RawExtractedDecision } from './decisionPdfExtraction.js';
 
 const label = (over: Partial<ExtractionLabel> = {}): ExtractionLabel => ({
     rollCall: { presentMembers: [], absentMembers: [], verified: true },
-    attendanceChanges: { stated: false, anchoredBy: null, asExtracted: [], verified: true },
+    attendanceChanges: { stated: false, verified: true },
     votes: { phraseAsPrinted: null, carriesTally: false, namedVoters: 'none', asExtracted: [], verified: true },
     subject: { agendaItemNumber: null, isOutOfAgenda: false, verified: true },
     excerpt: { chars: 0, extractionFlaggedIncomplete: false, verified: true },
@@ -298,7 +298,7 @@ describe('computeVerdict, attendanceChanges', () => {
         const v = computeVerdict(
             'attendanceChanges',
             obs({ finding: 'agenda_item', quote: 'κατά τη συζήτηση του 3ου θέματος αποβλήθηκε' }),
-            label({ attendanceChanges: { stated: true, anchoredBy: 'session', asExtracted: [], verified: true } }),
+            label({ attendanceChanges: { stated: true, anchoredBy: 'nothing', asExtracted: [], verified: true } }),
             got({ attendanceChanges: [change('departure', 'agenda_item', '3')] }),
             'changes lost: departure π. σκουφης @ session, departure ν. δελης @ session',
         );

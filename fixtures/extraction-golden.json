@@ -156,8 +156,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -233,8 +231,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -297,8 +293,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -371,8 +365,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -433,8 +425,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -499,8 +489,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -622,8 +610,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -705,8 +691,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1100,8 +1084,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1207,8 +1189,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1273,8 +1253,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1339,8 +1317,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1408,8 +1384,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1546,8 +1520,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1653,8 +1625,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -1708,7 +1678,17 @@
         },
         "statedButUnstorable": [
          "correctedRepost"
-        ]
+        ],
+        "presidedBy": {
+         "name": null,
+         "verified": true,
+         "evidence": {
+          "quote": "Του Δημάρχου Άργους - Μυκηνών κ. Ιωάννη Μαλτέζου απουσιάζοντος και αναπληρούμενου από τον Αντιδήμαρχο κ. Παναγιώτη Καμπόσο",
+          "ada": "99ΣΔΩΨΔ-4ΗΚ",
+          "page": 1,
+          "adjudicatedAt": "2026-09-22T00:00:00Z"
+         }
+        }
        }
       },
       {
@@ -1884,7 +1864,7 @@
          "verified": "agreed"
         },
         "attendanceChanges": {
-         "stated": false,
+         "stated": true,
          "anchoredBy": "this_document",
          "asExtracted": [
           {
@@ -2108,6 +2088,56 @@
          "verified": "baseline"
         },
         "statedButUnstorable": []
+       }
+      },
+      {
+       "ada": "ΨΟ90ΩΨΔ-6ΜΥ",
+       "pdfUrl": "https://diavgeia.gov.gr/doc/ΨΟ90ΩΨΔ-6ΜΥ",
+       "pages": 0,
+       "alsoInReadingFixture": false,
+       "selectedBecause": [
+        "secretaryInList=yes"
+       ],
+       "namedEdgeCase": null,
+       "needsReview": false,
+       "extraction": {
+        "rollCall": {
+         "layout": "",
+         "headingsAsPrinted": [],
+         "statedBodySize": null,
+         "presentMembers": [],
+         "absentMembers": [],
+         "verified": false
+        },
+        "attendanceChanges": {
+         "stated": false,
+         "verified": false
+        },
+        "votes": {
+         "phraseAsPrinted": "",
+         "phraseAsExtracted": "",
+         "carriesTally": false,
+         "namedVoters": "",
+         "declarationsRecorded": false,
+         "perLineVote": false,
+         "asExtracted": [],
+         "verified": false
+        },
+        "subject": {
+         "agendaItemNumber": null,
+         "isOutOfAgenda": false,
+         "asExtracted": null,
+         "verified": false
+        },
+        "excerpt": {
+         "chars": null,
+         "extractionFlaggedIncomplete": false,
+         "verified": false
+        },
+        "presidedBy": {
+         "name": null,
+         "verified": true
+        }
        }
       }
      ]
@@ -2859,8 +2889,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -3737,8 +3765,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -3860,8 +3886,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -4178,8 +4202,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -4351,8 +4373,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -4535,8 +4555,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -4658,8 +4676,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -4898,8 +4914,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -4980,8 +4994,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -5506,8 +5518,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -5698,8 +5708,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -5768,8 +5776,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -6595,8 +6601,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -6754,8 +6758,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -7174,7 +7176,11 @@
          "extractionFlaggedIncomplete": false,
          "verified": "baseline"
         },
-        "statedButUnstorable": []
+        "statedButUnstorable": [],
+        "presidedBy": {
+         "name": null,
+         "verified": true
+        }
        }
       },
       {
@@ -7241,8 +7247,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -7632,8 +7636,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "nothing",
-         "asExtracted": [],
          "verified": true,
          "review": [
           {
@@ -7712,8 +7714,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -8198,8 +8198,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -8311,8 +8309,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -8581,8 +8577,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -8674,8 +8668,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -8874,8 +8866,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "agenda_item",
-         "asExtracted": [],
          "verified": true,
          "review": [
           {
@@ -9051,8 +9041,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "this_document",
-         "asExtracted": [],
          "verified": true,
          "review": [
           {
@@ -9167,8 +9155,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -9300,8 +9286,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -9629,8 +9613,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -9746,6 +9728,74 @@
          "correctedRepost"
         ]
        }
+      },
+      {
+       "ada": "Ψ3ΓΚΩΞΒ-ΧΚ2",
+       "pdfUrl": "https://diavgeia.gov.gr/doc/Ψ3ΓΚΩΞΒ-ΧΚ2",
+       "pages": 0,
+       "alsoInReadingFixture": false,
+       "selectedBecause": [
+        "perVoteAbsence=yes",
+        "decisionAttendance=none"
+       ],
+       "namedEdgeCase": null,
+       "needsReview": false,
+       "extraction": {
+        "rollCall": {
+         "layout": "",
+         "headingsAsPrinted": [],
+         "statedBodySize": null,
+         "presentMembers": [],
+         "absentMembers": [],
+         "verified": false
+        },
+        "attendanceChanges": {
+         "stated": false,
+         "verified": false
+        },
+        "votes": {
+         "phraseAsPrinted": "",
+         "phraseAsExtracted": "",
+         "carriesTally": false,
+         "namedVoters": "",
+         "declarationsRecorded": false,
+         "perLineVote": false,
+         "asExtracted": [],
+         "verified": false
+        },
+        "subject": {
+         "agendaItemNumber": null,
+         "isOutOfAgenda": false,
+         "asExtracted": null,
+         "verified": false
+        },
+        "excerpt": {
+         "chars": null,
+         "extractionFlaggedIncomplete": false,
+         "verified": false
+        },
+        "decisionAttendance": {
+         "members": null,
+         "verified": true
+        },
+        "perVoteAbsence": {
+         "members": [
+          "Δημήτριος Τσελεμπής",
+          "Μιχαήλ Στράντζελης",
+          "Αθανάσιος Δόμπας",
+          "Πέτρος Αργυριάδης",
+          "Ηλίας Αγγελακούδης"
+         ],
+         "asPrinted": "Κατά την διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι Δημήτριος Τσελεμπής, Μιχαήλ Στράντζελης, Αθανάσιος Δόμπας, Πέτρος Αργυριάδης και Ηλίας Αγγελακούδης.",
+         "verified": true,
+         "evidence": {
+          "quote": "Κατά την διάρκεια της ψήφισης του θέματος απουσίαζαν από την αίθουσα οι Δημοτικοί Σύμβουλοι Δημήτριος Τσελεμπής, Μιχαήλ Στράντζελης, Αθανάσιος Δόμπας, Πέτρος Αργυριάδης και Ηλίας Αγγελακούδης.",
+          "ada": "Ψ3ΓΚΩΞΒ-ΧΚ2",
+          "page": 1,
+          "adjudicatedAt": "2026-09-22T00:00:00Z"
+         }
+        }
+       }
       }
      ]
     }
@@ -9826,8 +9876,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "nothing",
-         "asExtracted": [],
          "verified": true,
          "review": [
           {
@@ -9927,8 +9975,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10009,8 +10055,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10160,8 +10204,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "this_document",
-         "asExtracted": [],
          "verified": true,
          "review": [
           {
@@ -10269,8 +10311,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10362,8 +10402,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10458,8 +10496,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "agenda_item",
-         "asExtracted": [],
          "verified": true,
          "review": [
           {
@@ -10533,6 +10569,106 @@
           "Αντώνιος Ρεκλείτης"
          ],
          "asPrinted": "Κατά τη διαδικασία της ψηφοφορίας απουσίαζαν οι Δημοτικοί Σύμβουλοι κ.κ. Μαρία Αθανασάκου - Μουντάκη, Βασίλειος Σιαμάνης και Αντώνιος Ρεκλείτης.",
+         "verified": true
+        }
+       }
+      },
+      {
+       "ada": "90Ψ3ΩΞ1-2ΙΙ",
+       "pdfUrl": "https://diavgeia.gov.gr/doc/90Ψ3ΩΞ1-2ΙΙ",
+       "pages": 0,
+       "alsoInReadingFixture": false,
+       "selectedBecause": [
+        "listOmitsSecretary=yes"
+       ],
+       "namedEdgeCase": null,
+       "needsReview": false,
+       "extraction": {
+        "rollCall": {
+         "layout": "",
+         "headingsAsPrinted": [],
+         "statedBodySize": null,
+         "presentMembers": [],
+         "absentMembers": [],
+         "verified": false
+        },
+        "attendanceChanges": {
+         "stated": false,
+         "verified": false
+        },
+        "votes": {
+         "phraseAsPrinted": "",
+         "phraseAsExtracted": "",
+         "carriesTally": false,
+         "namedVoters": "",
+         "declarationsRecorded": false,
+         "perLineVote": false,
+         "asExtracted": [],
+         "verified": false
+        },
+        "subject": {
+         "agendaItemNumber": null,
+         "isOutOfAgenda": false,
+         "asExtracted": null,
+         "verified": false
+        },
+        "excerpt": {
+         "chars": null,
+         "extractionFlaggedIncomplete": false,
+         "verified": false
+        },
+        "presidedBy": {
+         "name": null,
+         "verified": true
+        }
+       }
+      },
+      {
+       "ada": "9ΕΩΔΩΞ1-12Υ",
+       "pdfUrl": "https://diavgeia.gov.gr/doc/9ΕΩΔΩΞ1-12Υ",
+       "pages": 0,
+       "alsoInReadingFixture": false,
+       "selectedBecause": [
+        "actingSecretary=yes"
+       ],
+       "namedEdgeCase": null,
+       "needsReview": false,
+       "extraction": {
+        "rollCall": {
+         "layout": "",
+         "headingsAsPrinted": [],
+         "statedBodySize": null,
+         "presentMembers": [],
+         "absentMembers": [],
+         "verified": false
+        },
+        "attendanceChanges": {
+         "stated": false,
+         "verified": false
+        },
+        "votes": {
+         "phraseAsPrinted": "",
+         "phraseAsExtracted": "",
+         "carriesTally": false,
+         "namedVoters": "",
+         "declarationsRecorded": false,
+         "perLineVote": false,
+         "asExtracted": [],
+         "verified": false
+        },
+        "subject": {
+         "agendaItemNumber": null,
+         "isOutOfAgenda": false,
+         "asExtracted": null,
+         "verified": false
+        },
+        "excerpt": {
+         "chars": null,
+         "extractionFlaggedIncomplete": false,
+         "verified": false
+        },
+        "presidedBy": {
+         "name": null,
          "verified": true
         }
        }
@@ -10615,8 +10751,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10680,8 +10814,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10756,8 +10888,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10873,8 +11003,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -10947,8 +11075,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11024,8 +11150,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11103,8 +11227,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11219,8 +11341,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11290,8 +11410,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11444,8 +11562,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11515,8 +11631,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11586,8 +11700,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -11655,8 +11767,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -12967,8 +13077,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -13079,8 +13187,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -13162,8 +13268,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -13411,8 +13515,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -13843,8 +13945,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14340,8 +14440,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14404,8 +14502,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14498,8 +14594,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14563,8 +14657,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14688,8 +14780,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14774,8 +14864,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -14860,8 +14948,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -15227,8 +15313,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -15303,8 +15387,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -15542,8 +15624,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": "nothing",
-         "asExtracted": [],
          "verified": false
         },
         "votes": {
@@ -15663,6 +15743,124 @@
          "substitution"
         ]
        }
+      },
+      {
+       "ada": "ΨΓ47ΩΡΦ-Μ30",
+       "pdfUrl": "https://diavgeia.gov.gr/doc/ΨΓ47ΩΡΦ-Μ30",
+       "pages": 0,
+       "alsoInReadingFixture": false,
+       "selectedBecause": [
+        "presidedBy=vice-president"
+       ],
+       "namedEdgeCase": null,
+       "needsReview": false,
+       "extraction": {
+        "rollCall": {
+         "layout": "",
+         "headingsAsPrinted": [],
+         "statedBodySize": null,
+         "presentMembers": [],
+         "absentMembers": [],
+         "verified": false
+        },
+        "attendanceChanges": {
+         "stated": false,
+         "verified": false
+        },
+        "votes": {
+         "phraseAsPrinted": "",
+         "phraseAsExtracted": "",
+         "carriesTally": false,
+         "namedVoters": "",
+         "declarationsRecorded": false,
+         "perLineVote": false,
+         "asExtracted": [],
+         "verified": false
+        },
+        "subject": {
+         "agendaItemNumber": null,
+         "isOutOfAgenda": false,
+         "asExtracted": null,
+         "verified": false
+        },
+        "excerpt": {
+         "chars": null,
+         "extractionFlaggedIncomplete": false,
+         "verified": false
+        },
+        "presidedBy": {
+         "name": "ΜΕΤΙΚΑΡΙΔΗΣ ΘΕΟΔΩΡΟΣ",
+         "verified": true,
+         "evidence": {
+          "quote": "Παρόντες κατά την έναρξη της συνεδρίασης ήταν ο Αντιπρόεδρος της Δημοτικής Επιτροπής κος ΜΕΤΙΚΑΡΙΔΗΣ ΘΕΟΔΩΡΟΣ ο οποίος προήδρευσε λόγω της απουσίας της Δημάρχου",
+          "ada": "ΨΓ47ΩΡΦ-Μ30",
+          "page": 1,
+          "adjudicatedAt": "2026-09-22T00:00:00Z"
+         }
+        }
+       }
+      },
+      {
+       "ada": "ΨΧΞΧΩΡΦ-ΧΒΑ",
+       "pdfUrl": "https://diavgeia.gov.gr/doc/ΨΧΞΧΩΡΦ-ΧΒΑ",
+       "pages": 0,
+       "alsoInReadingFixture": false,
+       "selectedBecause": [
+        "decisionAttendance=verified",
+        "presidedBy=president"
+       ],
+       "namedEdgeCase": null,
+       "needsReview": false,
+       "extraction": {
+        "rollCall": {
+         "layout": "",
+         "headingsAsPrinted": [],
+         "statedBodySize": null,
+         "presentMembers": [],
+         "absentMembers": [],
+         "verified": false
+        },
+        "attendanceChanges": {
+         "stated": false,
+         "verified": false
+        },
+        "votes": {
+         "phraseAsPrinted": "",
+         "phraseAsExtracted": "",
+         "carriesTally": false,
+         "namedVoters": "",
+         "declarationsRecorded": false,
+         "perLineVote": false,
+         "asExtracted": [],
+         "verified": false
+        },
+        "subject": {
+         "agendaItemNumber": null,
+         "isOutOfAgenda": false,
+         "asExtracted": null,
+         "verified": false
+        },
+        "excerpt": {
+         "chars": null,
+         "extractionFlaggedIncomplete": false,
+         "verified": false
+        },
+        "presidedBy": {
+         "name": null,
+         "verified": true
+        },
+        "decisionAttendance": {
+         "members": [
+          "ΓΙΟΥΡΓΑΣ ΣΤΕΦΑΝΟΣ",
+          "ΚΙΚΗ ΗΛΕΚΤΡΑ",
+          "ΣΤΑΜΑΤΑΚΗΣ ΖΑΧΑΡΙΑΣ (ΧΑΡΗΣ)",
+          "ΠΟΛΙΤΗΣ ΘΩΜΑΣ",
+          "ΜΕΤΙΚΑΡΙΔΗΣ ΘΕΟΔΩΡΟΣ",
+          "ΚΑΡΑΒΙΔΑΣ ΑΝΔΡΕΑΣ"
+         ],
+         "verified": true
+        }
+       }
       }
      ]
     },
@@ -15762,8 +15960,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -15857,8 +16053,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {
@@ -15953,8 +16147,6 @@
         },
         "attendanceChanges": {
          "stated": false,
-         "anchoredBy": null,
-         "asExtracted": [],
          "verified": "agreed"
         },
         "votes": {

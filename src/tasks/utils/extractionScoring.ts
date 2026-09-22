@@ -41,8 +41,43 @@ export type FieldOutcome =
     /** Label is `verified: "unresolvable"` — reviewed, and the page cannot settle it. */
     | 'unlabelled';
 
-export const FIELDS = ['rollCall', 'attendanceChanges', 'perVoteAbsence', 'votes', 'subject', 'excerpt', 'mayor'] as const;
+export const FIELDS = ['rollCall', 'attendanceChanges', 'perVoteAbsence', 'votes', 'subject', 'excerpt', 'mayor', 'presidedBy', 'decisionAttendance'] as const;
 export type Field = (typeof FIELDS)[number];
+
+/**
+ * What the page ties a stated change to. `nothing` is a value, not a gap: the
+ * page states an arrival or a departure in prose and gives it no reference of
+ * any kind. A page that states no change at all carries no anchor.
+ */
+export const LABEL_ANCHORS = ['agenda_item', 'decision_number', 'phase', 'this_document', 'nothing'] as const;
+export type LabelAnchorKind = (typeof LABEL_ANCHORS)[number];
+
+/** Labels seeded before the vocabulary settled spell `phase` as `session_phase`. */
+export const STORED_LABEL_ANCHORS = [...LABEL_ANCHORS, 'session_phase'] as const;
+export type StoredLabelAnchor = (typeof STORED_LABEL_ANCHORS)[number];
+
+/** One arrival or departure as the label holds it. */
+export interface LabelledChange {
+    name: string | null;
+    type: 'arrival' | 'departure' | null;
+    agendaItem: AgendaItemRef | null;
+    timing: 'during' | 'after' | null;
+}
+
+/**
+ * What a page states about arrivals and departures.
+ *
+ * Discriminated on `stated`, so a label cannot say the page records no change
+ * and list some at the same time. That combination used to be representable and
+ * no scorer read `stated`, so such a label silently scored its list anyway.
+ * `asExtracted` may be empty under `stated: true`: the page states changes and
+ * the extractor that seeded the label lost them all, which is the disagreement
+ * the review round is for.
+ */
+export type AttendanceChangesLabel = { verified: LabelState; evidence?: LabelEvidence } & (
+    | { stated: false; anchoredBy?: never; asExtracted?: never }
+    | { stated: true; anchoredBy: StoredLabelAnchor; asExtracted: LabelledChange[] }
+);
 
 export interface ExtractionLabel {
     rollCall: {
@@ -52,20 +87,7 @@ export interface ExtractionLabel {
         /** Present only on `verified: "adjudicated"`. */
         evidence?: LabelEvidence;
     };
-    attendanceChanges: {
-        stated: boolean;
-        /** What the page pins its changes to: agenda_item | decision_number | phase | this_document | nothing (none stated). */
-        anchoredBy?: string | null;
-        asExtracted: Array<{
-            name: string | null;
-            type: 'arrival' | 'departure' | null;
-            agendaItem: AgendaItemRef | null;
-            timing: 'during' | 'after' | null;
-        }>;
-        verified: LabelState;
-        /** Present only on `verified: "adjudicated"`. */
-        evidence?: LabelEvidence;
-    };
+    attendanceChanges: AttendanceChangesLabel;
     votes: {
         phraseAsPrinted: string | null;
         carriesTally: boolean;
@@ -77,6 +99,10 @@ export interface ExtractionLabel {
     };
     /** The mayor's presence as the page states it; absent from labels that were never reviewed for it. */
     mayor?: { present: boolean; verified: LabelState; evidence?: LabelEvidence };
+    /** Who the page says presided in the mayor's or president's place; `name: null` when the page says nobody did. Absent from labels never reviewed for it. */
+    presidedBy?: { name: string | null; verified: LabelState; evidence?: LabelEvidence };
+    /** The page's own list of who was present for THIS decision (ΤΑ ΜΕΛΗ after the decision text); `members: null` when the page prints none. Absent from labels never reviewed for it. */
+    decisionAttendance?: { members: string[] | null; verified: LabelState; evidence?: LabelEvidence };
     subject: {
         agendaItemNumber: number | null;
         isOutOfAgenda: boolean;
@@ -162,6 +188,14 @@ const anchorKey = (item: AgendaItemRef | null, timing: string | null): string =>
 export function scoreAttendanceChanges(label: ExtractionLabel['attendanceChanges'], got: RawExtractedDecision | null): FieldScore {
     const gated = gate(label.verified);
     if (gated) return { outcome: gated, detail: '' };
+    const sessionChanges = (got?.attendanceChanges ?? []).filter(c => c.type !== 'absent_for_vote');
+    // A page that records no arrival or departure: anything the extractor
+    // returned is invented, and there is no anchor to compare.
+    if (!label.stated) {
+        return sessionChanges.length === 0
+            ? { outcome: 'agree', detail: '' }
+            : { outcome: 'disagree', detail: `changes extra: ${sessionChanges.length} where the page states none` };
+    }
     // The anchor is part of the fact: a departure "after #5" and one "during #5"
     // put the member on opposite sides of that item's vote.
     // A change is the person and the direction. Its position is compared only
@@ -169,16 +203,15 @@ export function scoreAttendanceChanges(label: ExtractionLabel['attendanceChanges
     // or a phase is checked as an anchor kind below, because labels seeded
     // from the old extractor cannot spell those values.
     // Labels written before the vocabulary settled say session_phase; the page's anchor is the phase.
-    const anchoredBy = label.anchoredBy === 'session_phase' ? 'phase' : (label.anchoredBy ?? null);
+    const anchoredBy: LabelAnchorKind = label.anchoredBy === 'session_phase' ? 'phase' : label.anchoredBy;
     const labelKey = (c: { name: string | null; type: string | null; agendaItem: AgendaItemRef | null; timing: string | null }) => {
-        const positional = anchoredBy === null || anchoredBy === 'agenda_item';
+        const positional = anchoredBy === 'agenda_item';
         return `${c.type} ${c.name ? normalizeGreekName(c.name) : '?'}${positional ? ` @ ${anchorKey(c.agendaItem, c.timing)}` : ''}`;
     };
     const key = (c: { name: string | null; type: string | null; agendaItem: AgendaItemRef | null; timing: string | null; anchor?: { kind: string } }) => {
-        const positional = (anchoredBy === null || anchoredBy === 'agenda_item') && (!c.anchor || c.anchor.kind === 'agenda_item' || c.anchor.kind === 'session_start' || c.anchor.kind === 'session_end');
+        const positional = anchoredBy === 'agenda_item' && (!c.anchor || c.anchor.kind === 'agenda_item' || c.anchor.kind === 'session_start' || c.anchor.kind === 'session_end');
         return `${c.type} ${c.name ? normalizeGreekName(c.name) : '?'}${positional ? ` @ ${anchorKey(c.agendaItem, c.timing)}` : ''}`;
     };
-    const sessionChanges = (got?.attendanceChanges ?? []).filter(c => c.type !== 'absent_for_vote');
     const want = new Set(label.asExtracted.map(labelKey));
     const have = new Set(sessionChanges.map(key));
     if (want.size > 0 && have.size === 0) return { outcome: 'missing', detail: `${want.size} change(s) lost` };
@@ -197,9 +230,9 @@ export function scoreAttendanceChanges(label: ExtractionLabel['attendanceChanges
     // reading that left them unanchored, where `changeAnchor` makes them
     // `session_end` and the replay places them after every subject — the member
     // is derived present for the very decision the page says they missed.
-    if (anchoredBy && anchoredBy !== 'nothing' && sessionChanges.length > 0) {
+    if (anchoredBy !== 'nothing' && sessionChanges.length > 0) {
         const kinds = new Set(sessionChanges.map(c => changeAnchor(c).kind));
-        if (!kinds.has(anchoredBy as never)) problems.push(`anchor: page ${anchoredBy}, extracted ${[...kinds].join('/')}`);
+        if (!kinds.has(anchoredBy)) problems.push(`anchor: page ${anchoredBy}, extracted ${[...kinds].join('/')}`);
     }
     return { outcome: problems.length ? 'disagree' : 'agree', detail: problems.join('; ') };
 }
@@ -215,6 +248,36 @@ export function scoreMayor(label: ExtractionLabel['mayor'] | undefined, got: Raw
         : { outcome: 'disagree', detail: `page ${label.present ? 'present' : 'absent'}, extracted ${got.mayorPresent.present ? 'present' : 'absent'}` };
 }
 
+/**
+ * Whoever the page says chaired in the president's or mayor's place. The
+ * derivation exempts that person from the per-decision list, so a misread here
+ * seats or unseats a councillor for a whole session.
+ */
+export function scorePresidedBy(label: ExtractionLabel['presidedBy'] | undefined, got: RawExtractedDecision | null): FieldScore {
+    if (!label) return { outcome: 'unlabelled', detail: '' };
+    const gated = gate(label.verified);
+    if (gated) return { outcome: gated, detail: '' };
+    if (!got) return { outcome: 'missing', detail: 'nothing read' };
+    const have = got.presidedBy?.name ?? null;
+    if (label.name === null) return have === null ? { outcome: 'agree', detail: '' } : { outcome: 'disagree', detail: `page names nobody presiding, extracted ${have}` };
+    if (have === null) return { outcome: 'missing', detail: `page says ${label.name} presided` };
+    return (sameGreekPerson(label.name, have) || sameGreekPerson(have, label.name)) ? { outcome: 'agree', detail: '' } : { outcome: 'disagree', detail: `page ${label.name}, extracted ${have}` };
+}
+
+/** ΤΑ ΜΕΛΗ after the decision text: the list the derivation takes as this decision's attendance where the body prints one. */
+export function scoreDecisionAttendance(label: ExtractionLabel['decisionAttendance'] | undefined, got: RawExtractedDecision | null): FieldScore {
+    if (!label) return { outcome: 'unlabelled', detail: '' };
+    const gated = gate(label.verified);
+    if (gated) return { outcome: gated, detail: '' };
+    if (!got) return { outcome: 'missing', detail: 'nothing read' };
+    const have = nameSet(got.decisionAttendance?.present ?? []);
+    if (label.members === null) return have.size === 0 ? { outcome: 'agree', detail: '' } : { outcome: 'disagree', detail: `page prints no list, extracted ${have.size} names` };
+    const want = nameSet(label.members);
+    if (want.size > 0 && have.size === 0) return { outcome: 'missing', detail: `${want.size}-name list lost` };
+    const detail = describeDiff('listed', setDiff(want, have));
+    return { outcome: detail ? 'disagree' : 'agree', detail };
+}
+
 /** «Κατά τη διαδικασία της ψηφοφορίας απουσίαζε…»: who the page excludes from this vote. */
 export function scorePerVoteAbsence(label: ExtractionLabel['perVoteAbsence'] | undefined, got: RawExtractedDecision | null): FieldScore {
     if (!label) return { outcome: 'unlabelled', detail: '' };
@@ -228,9 +291,9 @@ export function scorePerVoteAbsence(label: ExtractionLabel['perVoteAbsence'] | u
 }
 
 /**
- * The page names dissenters and declarers; it almost never names who voted
- * for. The pipeline derives FOR from presence, so FOR entries are compared
- * only where the page actually listed every voter.
+ * The page names dissenters and declarers; it almost never names who voted for.
+ * A FOR the page does not print is not the task's to state, so FOR entries are
+ * compared only where the page listed every voter.
  */
 export function scoreVotes(label: ExtractionLabel['votes'], got: RawExtractedDecision | null): FieldScore {
     const gated = gate(label.verified);
@@ -303,6 +366,8 @@ export function scoreDocument(label: ExtractionLabel, got: RawExtractedDecision 
         subject: scoreSubject(label.subject, got),
         excerpt: scoreExcerpt(label.excerpt, got),
         mayor: scoreMayor(label.mayor, got),
+        presidedBy: scorePresidedBy(label.presidedBy, got),
+        decisionAttendance: scoreDecisionAttendance(label.decisionAttendance, got),
     };
 }
 
