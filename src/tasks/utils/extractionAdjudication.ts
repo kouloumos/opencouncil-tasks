@@ -419,7 +419,7 @@ export async function adjudicateField(args: {
     const selected = headAndTailPages(totalPages, ADJUDICATION_HEAD_PAGES, ADJUDICATION_TAIL_PAGES);
     const partial = selected.length < totalPages;
     const base64 = partial
-        ? await extractPdfPageSet(pdfBuffer, selected)
+        ? await extractPdfPageSet(srcDoc, selected)
         : pdfBuffer.toString('base64');
 
     const { result: obsRaw, usage } = await aiChat<Observation>({

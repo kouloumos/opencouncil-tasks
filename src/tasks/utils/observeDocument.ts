@@ -80,10 +80,10 @@ export async function observeDocument(ada: string, opts: ObserveDocumentOptions)
     if (!fs.existsSync(pdfPath)) {
         fs.writeFileSync(pdfPath, await downloadPdfAsBuffer(adaToPdfUrl(ada)));
     }
-    const buffer = fs.readFileSync(pdfPath);
-    const pages = (await PDFDocument.load(buffer)).getPageCount();
+    const srcDoc = await PDFDocument.load(fs.readFileSync(pdfPath));
+    const pages = srcDoc.getPageCount();
     const base64 = await extractPdfPageSet(
-        buffer,
+        srcDoc,
         headAndTailPages(pages, OBSERVATION_HEAD_PAGES, OBSERVATION_TAIL_PAGES),
     );
     const { result, usage } = await aiChat<DocumentObservation>({

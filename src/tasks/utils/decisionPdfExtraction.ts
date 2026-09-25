@@ -949,7 +949,7 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
         const actualPages = Math.min(pagesToSend, totalPages);
         console.log(`  Trying with first ${actualPages}/${totalPages} pages...`);
 
-        const partialBase64 = await extractPdfPages(pdfBuffer, 0, actualPages);
+        const partialBase64 = await extractPdfPages(srcDoc, 0, actualPages);
 
         const partialPrompt = actualPages < totalPages
             ? `${userPrompt}\n\nNote: You are seeing pages 1-${actualPages} of a ${totalPages}-page document. If the decision section ("ΑΠΟΦΑΣΙΖΕΙ") is not visible in these pages because the document is cut off, set "incomplete" to true. If you can see "ΑΠΟΦΑΣΙΖΕΙ" but some details are missing or unclear, set "incomplete" to false.`
@@ -994,7 +994,7 @@ export async function extractDecisionFromPdf(pdfUrl: string, mayorName?: string,
         const windowStart = Math.max(MAX_FRONT_PAGES, windowEnd - TAIL_PAGES);
         console.log(`  Front pages exhausted, trying pages ${windowStart + 1}-${windowEnd} of ${totalPages}...`);
 
-        const tailBase64 = await extractPdfPages(pdfBuffer, windowStart, windowEnd);
+        const tailBase64 = await extractPdfPages(srcDoc, windowStart, windowEnd);
         const tailPrompt = `${userPrompt}\n\nNote: You are seeing pages ${windowStart + 1}-${windowEnd} of a ${totalPages}-page document. The earlier pages contained attendance lists and preamble but not the decision section. Extract the decision information from these pages. If the decision section ("ΑΠΟΦΑΣΙΖΕΙ") is not visible in these pages either, set "incomplete" to true.`;
 
         const { result: tailRaw, usage } = await aiChat<RawLlmExtraction>({

@@ -1,12 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { describePageRanges, extractPdfPageSet, extractPdfPages, headAndTailPages } from './pdfPages.js';
 
-/** Built rather than fixtured, so the test carries no binary asset. */
+/** Built rather than fixtured, so the test carries no binary asset. Page i is 200 + i wide, so a slice says which pages it holds. */
 async function buildPdf(pages: number): Promise<Buffer> {
     const doc = await PDFDocument.create();
-    for (let i = 0; i < pages; i++) doc.addPage([200, 200]);
+    for (let i = 0; i < pages; i++) doc.addPage([200 + i, 200]);
     return Buffer.from(await doc.save());
+}
+
+/** The widths of a slice's pages, which name the source pages it took. */
+async function pageWidths(base64: string): Promise<number[]> {
+    return (await PDFDocument.load(Buffer.from(base64, 'base64'))).getPages().map(p => p.getWidth());
 }
 
 async function pageCount(base64: string): Promise<number> {
@@ -28,6 +33,26 @@ describe('extractPdfPageSet', () => {
         const pdf = await buildPdf(3);
         await expect(extractPdfPageSet(pdf, [])).rejects.toThrow(/No valid pages/);
         await expect(extractPdfPageSet(pdf, [9, 10])).rejects.toThrow(/No valid pages/);
+    });
+
+    // A progressive read slices the same document up to eleven times. It parses
+    // once and passes the document, so both inputs must reach the same slice.
+    it('slices a document the caller already parsed the same way as the bytes', async () => {
+        const pdf = await buildPdf(6);
+        // Each slice is a new document that pdf-lib stamps with the current time,
+        // so two slices taken a second apart are different bytes: compare the
+        // pages each one took, with the clock moved between the two on purpose.
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            vi.setSystemTime(new Date('2026-09-25T10:00:00Z'));
+            const fromDoc = await extractPdfPageSet(await PDFDocument.load(pdf), [0, 5]);
+            vi.setSystemTime(new Date('2026-09-25T10:00:01Z'));
+            const fromBytes = await extractPdfPageSet(pdf, [0, 5]);
+            expect(await pageWidths(fromDoc)).toEqual([200, 205]);
+            expect(await pageWidths(fromBytes)).toEqual([200, 205]);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 

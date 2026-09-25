@@ -10,14 +10,28 @@ import { PDFDocument } from 'pdf-lib';
  */
 
 /**
+ * A PDF to slice: the bytes, or a document a caller has already parsed.
+ *
+ * Every caller reads the page count before it can choose pages, so it holds a
+ * parsed document already. Passing the buffer made each slice parse it again,
+ * and a progressive read of one 19-page document parsed the same bytes about
+ * eleven times.
+ */
+export type PdfSource = Buffer | PDFDocument;
+
+/** `instanceof PDFDocument` is not usable: tests that mock `pdf-lib` leave it un-callable. */
+const loaded = (source: PdfSource): Promise<PDFDocument> =>
+    Buffer.isBuffer(source) ? PDFDocument.load(source) : Promise.resolve(source);
+
+/**
  * Build a new PDF from an explicit list of 0-indexed pages, returned as base64.
  *
  * Out-of-range and duplicate indices are dropped and the given order is kept,
  * so a caller can ask for a head-and-tail slice without first working out
  * whether the two ranges overlap.
  */
-export async function extractPdfPageSet(pdfBuffer: Buffer, pageIndices: number[]): Promise<string> {
-    const srcDoc = await PDFDocument.load(pdfBuffer);
+export async function extractPdfPageSet(source: PdfSource, pageIndices: number[]): Promise<string> {
+    const srcDoc = await loaded(source);
     const totalPages = srcDoc.getPageCount();
 
     const seen = new Set<number>();
@@ -48,11 +62,11 @@ export async function extractPdfPageSet(pdfBuffer: Buffer, pageIndices: number[]
  * Extract a range of pages from a PDF buffer and return as base64.
  * Pages are 0-indexed: extractPdfPages(buf, 0, 5) → first 5 pages.
  */
-export async function extractPdfPages(pdfBuffer: Buffer, startPage: number, endPage: number): Promise<string> {
-    const srcDoc = await PDFDocument.load(pdfBuffer);
+export async function extractPdfPages(source: PdfSource, startPage: number, endPage: number): Promise<string> {
+    const srcDoc = await loaded(source);
     const actualEnd = Math.min(endPage, srcDoc.getPageCount());
     return extractPdfPageSet(
-        pdfBuffer,
+        srcDoc,
         Array.from({ length: Math.max(0, actualEnd - startPage) }, (_, i) => startPage + i),
     );
 }
