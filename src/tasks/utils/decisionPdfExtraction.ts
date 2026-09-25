@@ -591,7 +591,7 @@ Rules:
 - "name" must be the EXACT string from unmatchedNames
 - "personId" must be an id from availablePeople, or null if no match
 - When the surname matches exactly, match confidently even if the first name differs significantly (it's almost certainly a diminutive)
-- Each personId at most once`,
+- The same personId may be returned for several names. "unmatchedNames" is collected across every document of one meeting, and two documents often spell the same member differently`,
         userPrompt: JSON.stringify({
             unmatchedNames,
             availablePeople: availablePeople.map(p => ({ id: p.id, name: p.name })),
@@ -605,20 +605,22 @@ Rules:
 
     const matched: { name: string; personId: string }[] = [];
     const stillUnmatched: string[] = [];
-    const usedIds = new Set<string>();
     // The model copies ids as text and has been seen splicing two of them into
     // one that exists nowhere; such a row would fail the foreign key downstream
     // and take the whole subject's attendance with it.
     const knownIds = new Set(availablePeople.map(p => p.id));
 
+    // One personId may be claimed by several names. The caller collects the
+    // unmatched names of a whole meeting, so two documents spelling one member
+    // differently arrive together; rejecting the second spelling would leave it
+    // identified by its raw text and split the member across two groups.
     for (const entry of result) {
         if (!entry || typeof entry.name !== 'string' || !entry.name) continue;
         if (entry.personId && !knownIds.has(entry.personId)) {
             console.warn(`  LLM matcher returned an id not in the roster for "${entry.name}": ${entry.personId} — treating as unmatched`);
         }
-        if (entry.personId && knownIds.has(entry.personId) && !usedIds.has(entry.personId)) {
+        if (entry.personId && knownIds.has(entry.personId)) {
             matched.push({ name: entry.name, personId: entry.personId });
-            usedIds.add(entry.personId);
         } else {
             stillUnmatched.push(entry.name);
         }
@@ -634,32 +636,6 @@ Rules:
 
     console.log(`  LLM matched ${matched.length}, still unmatched: ${stillUnmatched.length}`);
     return { matched, stillUnmatched, usage };
-}
-
-/**
- * Two-step matching: token-sort first, then LLM fallback for remaining.
- */
-export async function matchAllMembers(
-    rawNames: string[],
-    people: PersonForMatching[],
-): Promise<MatchResult> {
-    // Step 1: token-sort matching
-    const step1 = matchMembersToPersonIds(rawNames, people);
-
-    if (step1.unmatched.length === 0) {
-        return step1;
-    }
-
-    // Step 2: LLM fallback for unmatched
-    const alreadyMatchedIds = new Set(step1.matchedIds);
-    const availablePeople = people.filter(p => !alreadyMatchedIds.has(p.id));
-
-    const step2 = await llmMatchMembers(step1.unmatched, availablePeople);
-
-    return {
-        matchedIds: [...step1.matchedIds, ...step2.matched.map(m => m.personId)],
-        unmatched: step2.stillUnmatched,
-    };
 }
 
 // --- PDF extraction ---

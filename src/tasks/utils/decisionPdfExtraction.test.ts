@@ -70,7 +70,6 @@ import {
     tokenSortKeys,
     matchMembersToPersonIds,
     matchPersonByName,
-    matchAllMembers,
     llmMatchMembers,
     sameGreekPerson,
     greekNameInList,
@@ -315,24 +314,31 @@ describe('llmMatchMembers', () => {
         expect(mockAiChat).not.toHaveBeenCalled();
     });
 
-    it('prevents duplicate personId matches', async () => {
+    // The caller collects unmatched names across every document of one meeting,
+    // so both spellings of one member arrive in a single call. Keeping only the
+    // first spelling would leave the second identified by its raw text, and the
+    // member would be split across two attendance groups.
+    it('gives both spellings of one member the same personId', async () => {
         mockAiChat.mockResolvedValueOnce({
             result: {
                 matches: [
-                    { name: 'NAME1', personId: 'p1' },
-                    { name: 'NAME2', personId: 'p1' }, // duplicate
+                    { name: 'ΠΑΠΑΔΟΠΟΥΛΟΣ Κ.', personId: 'p1' },
+                    { name: 'Κωστής Παπαδόπουλος', personId: 'p1' },
                 ],
             },
             usage: noUsage,
         });
 
         const result = await llmMatchMembers(
-            ['NAME1', 'NAME2'],
-            [{ id: 'p1', name: 'Person 1' }],
+            ['ΠΑΠΑΔΟΠΟΥΛΟΣ Κ.', 'Κωστής Παπαδόπουλος'],
+            [{ id: 'p1', name: 'Κωνσταντίνος Παπαδόπουλος' }],
         );
 
-        expect(result.matched).toEqual([{ name: 'NAME1', personId: 'p1' }]);
-        expect(result.stillUnmatched).toEqual(['NAME2']);
+        expect(result.matched).toEqual([
+            { name: 'ΠΑΠΑΔΟΠΟΥΛΟΣ Κ.', personId: 'p1' },
+            { name: 'Κωστής Παπαδόπουλος', personId: 'p1' },
+        ]);
+        expect(result.stillUnmatched).toEqual([]);
     });
 
     it('requests structured output instead of a prefill (rejected on Claude 4.6+)', async () => {
@@ -349,8 +355,6 @@ describe('llmMatchMembers', () => {
     });
 });
 
-// --- matchAllMembers tests (two-step) ---
-
 describe('llmMatchMembers', () => {
     it('rejects an id the model invented instead of copying', async () => {
         mockAiChat.mockResolvedValueOnce({
@@ -366,59 +370,6 @@ describe('llmMatchMembers', () => {
         );
         expect(matched).toEqual([{ name: 'Ευαγγελία Λίλιαν Γαζή', personId: 'p1' }]);
         expect(stillUnmatched).toEqual(['Σ. Αθανασάκης']);
-    });
-});
-
-describe('matchAllMembers', () => {
-    beforeEach(() => {
-        mockAiChat.mockReset();
-    });
-
-    it('matches all via token-sort without calling LLM', async () => {
-        const result = await matchAllMembers(
-            ['ΜΠΑΡΜΠΕΡΗΣ ΕΥΘΥΜΙΟΣ'],
-            [{ id: 'p1', name: 'Ευθύμιος Μπαρμπέρης' }],
-        );
-        expect(result.matchedIds).toEqual(['p1']);
-        expect(result.unmatched).toEqual([]);
-        expect(mockAiChat).not.toHaveBeenCalled();
-    });
-
-    it('falls back to LLM for token-sort misses', async () => {
-        // "ΓΙΑΝΝΗΣ" is a nickname for "Ιωάννης" — token-sort can't match this
-        mockAiChat.mockResolvedValueOnce({
-            result: { matches: [{ name: 'ΠΑΠΑΔΟΠΟΥΛΟΣ ΓΙΑΝΝΗΣ', personId: 'p2' }] },
-            usage: noUsage,
-        });
-
-        const result = await matchAllMembers(
-            ['ΜΠΑΡΜΠΕΡΗΣ ΕΥΘΥΜΙΟΣ', 'ΠΑΠΑΔΟΠΟΥΛΟΣ ΓΙΑΝΝΗΣ'],
-            [
-                { id: 'p1', name: 'Ευθύμιος Μπαρμπέρης' },
-                { id: 'p2', name: 'Ιωάννης Παπαδόπουλος' },
-            ],
-        );
-
-        // p1 matched by token-sort, p2 matched by LLM
-        expect(result.matchedIds).toEqual(['p1', 'p2']);
-        expect(result.unmatched).toEqual([]);
-        // LLM only received the unmatched name, not p1
-        expect(mockAiChat).toHaveBeenCalledOnce();
-    });
-
-    it('reports truly unmatched names after both steps', async () => {
-        mockAiChat.mockResolvedValueOnce({
-            result: { matches: [{ name: 'ΑΓΝΩΣΤΟΣ ΑΝΘΡΩΠΟΣ', personId: null }] },
-            usage: noUsage,
-        });
-
-        const result = await matchAllMembers(
-            ['ΜΠΑΡΜΠΕΡΗΣ ΕΥΘΥΜΙΟΣ', 'ΑΓΝΩΣΤΟΣ ΑΝΘΡΩΠΟΣ'],
-            [{ id: 'p1', name: 'Ευθύμιος Μπαρμπέρης' }],
-        );
-
-        expect(result.matchedIds).toEqual(['p1']);
-        expect(result.unmatched).toEqual(['ΑΓΝΩΣΤΟΣ ΑΝΘΡΩΠΟΣ']);
     });
 });
 
