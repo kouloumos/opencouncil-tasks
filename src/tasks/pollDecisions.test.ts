@@ -13,15 +13,12 @@ vi.mock('@schemalabs/diavgeia-cli', () => ({
 }));
 
 // Mock aiChat + usage helpers
-vi.mock("../lib/ai.js", () => ({
+// Only the model call is replaced. The usage helpers are pure, and a copy of
+// them here would drift from the ones the task actually runs.
+vi.mock("../lib/ai.js", async (importOriginal) => ({
+    ...await importOriginal<typeof import("../lib/ai.js")>(),
     aiChat: vi.fn(async () => ({ result: { matches: [], reassignments: [], unmatched: [] }, usage: NO_USAGE_MOCK })),
     NO_USAGE: NO_USAGE_MOCK,
-    addUsage: (a: Record<string, number>, b: Record<string, number>) => ({
-        input_tokens: a.input_tokens + b.input_tokens,
-        output_tokens: a.output_tokens + b.output_tokens,
-        cache_creation_input_tokens: (a.cache_creation_input_tokens || 0) + (b.cache_creation_input_tokens || 0),
-        cache_read_input_tokens: (a.cache_read_input_tokens || 0) + (b.cache_read_input_tokens || 0),
-    }),
 }));
 
 // Mock extractionPipeline (extraction is tested separately)

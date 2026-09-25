@@ -12,7 +12,7 @@ import { Diavgeia } from '@schemalabs/diavgeia-cli';
 import type { Decision } from '@schemalabs/diavgeia-cli';
 import { ProfileBodyRequest, ProfileBodyResult } from '../types.js';
 import { Task } from './pipeline.js';
-import { addUsage, NO_USAGE } from '../lib/ai.js';
+import { addUsage, NO_USAGE, toTaskTokenUsage } from '../lib/ai.js';
 import { buildBodyFactProfile } from './utils/bodyFactProfile.js';
 import { conventionsFromProfile } from './utils/conventionsFromProfile.js';
 import { observeDocument, DOCUMENT_CACHE_DIR, OBSERVATION_MODEL } from './utils/observeDocument.js';
@@ -132,11 +132,6 @@ export const profileBody: Task<ProfileBodyRequest, ProfileBodyResult> = async (r
         conventions,
         facts,
         adas,
-        usage: {
-            input_tokens: usage.input_tokens,
-            output_tokens: usage.output_tokens,
-            cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
-            cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
-        },
+        usage: toTaskTokenUsage(usage),
     };
 };

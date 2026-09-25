@@ -4,7 +4,7 @@ import type { Decision } from '@schemalabs/diavgeia-cli';
 import Anthropic from '@anthropic-ai/sdk';
 import { PollDecisionsRequest, PollDecisionsResult } from "../types.js";
 import { Task } from "./pipeline.js";
-import { aiChat, addUsage, NO_USAGE } from "../lib/ai.js";
+import { aiChat, addUsage, NO_USAGE, toTaskTokenUsage } from "../lib/ai.js";
 import { extractDecisionsFromPdfs, ExtractionSubject } from "./utils/extractionPipeline.js";
 import { computeSimilarityMatrix, buildCandidatePool, buildResolverPrompt, processResolverOutput, decisionPdfUrl } from './utils/resolverMatchDecisions.js';
 import type { ResolverOutput } from './utils/resolverMatchDecisions.js';
@@ -792,12 +792,7 @@ export const pollDecisions: Task<PollDecisionsRequest, PollDecisionsResult> = as
         unmatchedSubjects,
         ambiguousSubjects,
         extractions: extractionResult,
-        costs: {
-            input_tokens: totalUsage.input_tokens,
-            output_tokens: totalUsage.output_tokens,
-            cache_creation_input_tokens: totalUsage.cache_creation_input_tokens ?? 0,
-            cache_read_input_tokens: totalUsage.cache_read_input_tokens ?? 0,
-        },
+        usage: toTaskTokenUsage(totalUsage),
         metadata: {
             diavgeiaUid: request.diavgeiaUid,
             query: { fromDate, toDate, unitIds: request.diavgeiaUnitIds, scopes: scopeLabels },

@@ -6,6 +6,20 @@ import type { BodyFactProfile } from './tasks/utils/bodyFactProfile.js';
  * Generic task types
  */
 
+/**
+ * What a task's model calls cost, as a result carries it: four counters, always
+ * numbers. `UsageStats` in lib/ai.ts does not fit — it wraps the SDK's own
+ * `Usage`, whose cache counters are nullable and which carries fields no
+ * consumer of a task result reads. A wire contract also should not be a
+ * re-export of a vendored type that an SDK upgrade can change.
+ */
+export interface TaskTokenUsage {
+    input_tokens: number;
+    output_tokens: number;
+    cache_creation_input_tokens: number;
+    cache_read_input_tokens: number;
+}
+
 export interface TaskUpdate<T> {
     status: "processing" | "success" | "error" | "cancelled";
     stage: string;
@@ -643,12 +657,6 @@ export interface PollDecisionsRequest extends TaskRequest {
     }>;
     /** The polled meeting's administrative-body name, for the (body, date) partition. Absent = date-only partitioning. */
     administrativeBodyName?: string | null;
-    /**
-     * @deprecated Accepted for forward compatibility and currently unread —
-     * extraction takes `conventionsText`, and `profileBody` produces conventions
-     * rather than consuming them. opencouncil still sends it.
-     */
-    conventions?: DecisionConventions | null;
     /** The body's conventions rendered as sentences for the prompt; opencouncil owns the glossary. */
     conventionsText?: string | null;
     /** Fetch window derived by the app from publication-lag history. Absent = legacy 45-day window. */
@@ -726,12 +734,7 @@ export interface PollDecisionsResult {
          */
         attendanceEvents: AttendanceEvent[];
     } | null;
-    costs: {
-        input_tokens: number;
-        output_tokens: number;
-        cache_creation_input_tokens: number;
-        cache_read_input_tokens: number;
-    };
+    usage: TaskTokenUsage;
     metadata?: {
         diavgeiaUid: string;
         query: object;
@@ -768,10 +771,5 @@ export interface ProfileBodyResult {
     facts: BodyFactProfile;
     /** The documents read, so the profile can be traced back to its evidence. */
     adas: string[];
-    usage: {
-        input_tokens: number;
-        output_tokens: number;
-        cache_creation_input_tokens: number;
-        cache_read_input_tokens: number;
-    };
+    usage: TaskTokenUsage;
 }

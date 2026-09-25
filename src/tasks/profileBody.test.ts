@@ -16,14 +16,11 @@ vi.mock('./utils/observeDocument.js', () => ({
     OBSERVATION_MODEL: 'test-model',
 }));
 
-vi.mock('../lib/ai.js', () => ({
+// Only the model call is replaced. The usage helpers are pure, and a copy of
+// them here would drift from the ones the task actually runs.
+vi.mock('../lib/ai.js', async (importOriginal) => ({
+    ...await importOriginal<typeof import('../lib/ai.js')>(),
     NO_USAGE: NO_USAGE_MOCK,
-    addUsage: (a: Record<string, number>, b: Record<string, number>) => ({
-        input_tokens: (a.input_tokens || 0) + (b.input_tokens || 0),
-        output_tokens: (a.output_tokens || 0) + (b.output_tokens || 0),
-        cache_creation_input_tokens: (a.cache_creation_input_tokens || 0) + (b.cache_creation_input_tokens || 0),
-        cache_read_input_tokens: (a.cache_read_input_tokens || 0) + (b.cache_read_input_tokens || 0),
-    }),
 }));
 
 import { profileBody } from './profileBody.js';
