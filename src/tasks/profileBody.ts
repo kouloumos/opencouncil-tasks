@@ -18,26 +18,15 @@ import { conventionsFromProfile } from './utils/conventionsFromProfile.js';
 import { observeDocument, DOCUMENT_CACHE_DIR, OBSERVATION_MODEL } from './utils/observeDocument.js';
 import { parseDiavgeiaUnitScopes, formatDiavgeiaUnitScope } from './utils/diavgeiaUnitScope.js';
 import type { DocumentObservation } from './utils/documentObservation.js';
+// The sample spreads across what the fetch returned, not across the whole date
+// window: the search is capped (see `fetchCeiling`), so a body publishing more
+// than the cap is sampled across its most recent documents.
+import { thinToSample } from './utils/evenSample.js';
 
 const DEFAULT_SAMPLE_SIZE = 40;
 const DEFAULT_FROM_DATE = '2024-01-01';
 /** Documents read at once. Above this, Diavgeia and the API both start refusing. */
 const READ_CONCURRENCY = 4;
-
-/**
- * Pick `wanted` documents spread evenly across what was found, rather than the
- * first `wanted` of them. The spread is across what the fetch returned, not
- * across the whole date window: the search is capped (see `fetchCeiling`), so a
- * body publishing more than the cap is sampled across its most recent documents.
- */
-export function thinToSample<T>(found: T[], wanted: number): T[] {
-    if (wanted <= 0) return [];
-    if (found.length <= wanted) return found;
-    const step = (found.length - 1) / (wanted - 1 || 1);
-    // `!== undefined`, not `filter(Boolean)`: the guard is for a stride that ran
-    // past the end, and a falsy element is a legitimate pick.
-    return Array.from({ length: wanted }, (_, i) => found[Math.round(i * step)]).filter((d): d is T => d !== undefined);
-}
 
 export const profileBody: Task<ProfileBodyRequest, ProfileBodyResult> = async (request, onProgress) => {
     const sampleSize = request.sampleSize ?? DEFAULT_SAMPLE_SIZE;
