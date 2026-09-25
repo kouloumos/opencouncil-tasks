@@ -12,6 +12,7 @@ import { pollDecisions, resolveMeetingDecisions } from './tasks/pollDecisions.js
 import { extractDecisionFromPdf, adaToPdfUrl, AgendaItemRef, type RawExtractedDecision } from './tasks/utils/decisionPdfExtraction.js';
 import { scoreDocument, tallyScores, FIELDS, type ExtractionLabel, type DocumentScore } from './tasks/utils/extractionScoring.js';
 import { adjudicateField, isAdjudicable, tallyVerdicts, type Adjudication, type AdjudicableField } from './tasks/utils/extractionAdjudication.js';
+import { parseBodyHints } from './tasks/utils/bodyHints.js';
 import { readDecisionDocument, type DecisionReading } from './tasks/utils/readDecisionDocument.js';
 import { partitionReadDecisions, sameBody, type ReadDecision } from './tasks/utils/decisionPartition.js';
 import { sameDecisionNumber } from './tasks/utils/decisionNumberCompare.js';
@@ -1032,8 +1033,9 @@ program
     .option('-c, --concurrency <n>', 'parallel extractions', '4')
     .option('-l, --limit <n>', 'only extract the first N documents (cost control)')
     .option('--skip-cache', 'ignore cached extractions and call the model again')
+    .option('--hints-file <file>', 'per-body conventions text, as opencouncil\'s `scripts/conventions-text.ts --all` prints it. Production always sends it; without this the cold reader is scored')
     .option('-O, --output-file <file>', 'write per-document scores as JSON')
-    .action(async (file: string, options: { concurrency: string; limit?: string; skipCache?: boolean; outputFile?: string }) => {
+    .action(async (file: string, options: { concurrency: string; limit?: string; skipCache?: boolean; hintsFile?: string; outputFile?: string }) => {
         type Row = { ada: string; pdfUrl: string; city: string; body: string; label: ExtractionLabel };
         const fixture = JSON.parse(fs.readFileSync(file, 'utf-8')) as {
             version: number;
@@ -1046,6 +1048,20 @@ program
         if (limit) rows = rows.slice(0, limit);
         const concurrency = Math.max(1, parseInt(options.concurrency, 10) || 4);
 
+        // pollDecisions always passes conventionsText, so a run without hints
+        // scores a reader production never uses. The hints are per body, and a
+        // body the file does not cover is named rather than quietly read cold.
+        const bodyKey = (city: string, body: string) => `${city}/${body}`;
+        const hints = options.hintsFile ? parseBodyHints(fs.readFileSync(options.hintsFile, 'utf-8')) : new Map<string, string>();
+        if (options.hintsFile) {
+            const bodies = [...new Set(rows.map((r) => bodyKey(r.city, r.body)))];
+            const uncovered = bodies.filter((k) => !hints.has(k));
+            console.log(`Hints: ${bodies.length - uncovered.length}/${bodies.length} bodies covered`);
+            if (uncovered.length) console.log(`  read cold: ${uncovered.join(', ')}`);
+        } else {
+            console.log('No --hints-file: scoring the cold reader, which production never runs.');
+        }
+
         type Result = Row & { score: DocumentScore; fromCache: boolean; error?: string };
         const results: Result[] = [];
         let totalUsage = { ...NO_USAGE };
@@ -1057,9 +1073,10 @@ program
                 let fromCache = false;
                 let error: string | undefined;
                 try {
-                    // Keyed by the canonical URL so a run shares the cache with pollDecisions,
-                    // whatever form the fixture spells the ADA in.
-                    const out = await extractDecisionFromPdf(adaToPdfUrl(r.ada), undefined, options.skipCache);
+                    // Keyed by the canonical URL, whatever form the fixture spells the ADA in.
+                    // The scorer passes no mayor name, and pollDecisions does, so the two keep
+                    // separate entries: a scored reading is the scorer's own.
+                    const out = await extractDecisionFromPdf(adaToPdfUrl(r.ada), undefined, options.skipCache, hints.get(bodyKey(r.city, r.body)));
                     got = out.result;
                     fromCache = out.fromCache;
                     totalUsage = addUsage(totalUsage, out.usage);
@@ -1746,9 +1763,11 @@ program
     .option('-c, --concurrency <n>', 'parallel adjudications', '4')
     .option('-l, --limit <n>', 'only the first N disagreements (cost control)')
     .option('--skip-cache', 'ignore cached adjudications and read the pages again')
+    .option('--hints-file <file>', 'the --hints-file the scores were produced with, so each page is the reading that was scored')
     .option('-O, --output-file <file>', 'write the verdict queue as JSON')
-    .action(async (scoresFile: string, options: { fixture: string; field?: string; concurrency: string; limit?: string; skipCache?: boolean; outputFile?: string }) => {
+    .action(async (scoresFile: string, options: { fixture: string; field?: string; concurrency: string; limit?: string; skipCache?: boolean; hintsFile?: string; outputFile?: string }) => {
         try {
+            const hints = options.hintsFile ? parseBodyHints(fs.readFileSync(options.hintsFile, 'utf-8')) : new Map<string, string>();
             const scores = JSON.parse(fs.readFileSync(scoresFile, 'utf-8')) as {
                 results: Array<{ ada: string; city: string; body: string; score: DocumentScore }>;
             };
@@ -1787,8 +1806,10 @@ program
                     const label = labels.get(j.ada);
                     if (!label) { console.warn(`  ${j.ada}: not in ${options.fixture}, skipped`); continue; }
                     try {
-                        // Cached from the scorer's own run, so this costs nothing.
-                        const { result: got } = await extractDecisionFromPdf(adaToPdfUrl(j.ada));
+                        // The reading the scorer made, from its cache, when the hints match the
+                        // scoring run's: the hints are part of the cache key, so a scoring run
+                        // with --hints-file and an adjudication without it read the page twice.
+                        const { result: got } = await extractDecisionFromPdf(adaToPdfUrl(j.ada), undefined, undefined, hints.get(`${j.city}/${j.body}`));
                         // The scores file can predate the extraction now cached. Scoring the
                         // current reading settles that for free, and reading the page to
                         // adjudicate a disagreement that no longer exists would be incoherent.

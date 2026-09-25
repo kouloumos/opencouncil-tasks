@@ -20,9 +20,19 @@ npx tsx src/cli.ts evaluate-decision-extraction fixtures/extraction-golden.json
 | `-c, --concurrency <n>` | Parallel extractions. The default is 4. |
 | `-l, --limit <n>` | Extract only the first N documents. Use this to control cost. |
 | `--skip-cache` | Ignore cached extractions. The command calls the model again. |
+| `--hints-file <file>` | Per-body conventions text, as opencouncil's `scripts/conventions-text.ts --all` prints it. |
 | `-O, --output-file <file>` | Write per-document scores as JSON. |
 
-Extractions are cached under the canonical ADA URL, the same key `pollDecisions` uses, so a run over documents the pipeline has already seen costs nothing. Add `--skip-cache` after changing the prompt or the schema.
+Extractions are cached under the canonical ADA URL and the two inputs that steer a reading: the conventions text and the mayor's name. The scorer sends no mayor name and `pollDecisions` sends one, so the two keep separate entries. A second scoring run with the same `--hints-file` costs nothing. Add `--skip-cache` after you change the prompt or the schema.
+
+`pollDecisions` always sends `conventionsText`. Without `--hints-file` the command therefore scores a reader production never runs. opencouncil owns the glossary. Its `scripts/conventions-text.ts --all` prints the file, one block per body:
+
+```
+### argos/Δημοτικό Συμβούλιο
+<the sentences the poll request carries for this body>
+```
+
+The command reports how many bodies the file covers and names the ones it reads cold.
 
 ## What the fixture contains
 
@@ -115,7 +125,7 @@ Two things can be wrong: the extraction, or the label. On an `"agreed"` label bo
 npm run cli -- adjudicate-extraction .extraction-survey/scores-2026-09-17-c.json --field votes -O verdicts.json
 ```
 
-It takes the scorer's `-O` output, and writes nothing: the result is a verdict queue of `label_wrong`, `reader_wrong`, `both_wrong` and `needs_human`, each with the verbatim quote, its page, and whether the quote could be corroborated.
+It takes the scorer's `-O` output. Pass it the `--hints-file` the scores were produced with: the reading it checks then comes from the scorer's cache, and without the file it reads each page again, cold, at model cost. It writes nothing: the result is a verdict queue of `label_wrong`, `reader_wrong`, `both_wrong` and `needs_human`, each with the verbatim quote, its page, and whether the quote could be corroborated.
 
 The model is never asked who is right — it is not told what either reading says. It quotes what the page prints and names what it saw from a closed vocabulary per field; the verdict is computed in code from that observation against both readings. A model that ranked its own output would be scoring itself.
 
