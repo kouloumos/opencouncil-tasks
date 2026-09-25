@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { aiChat, ResultWithUsage, NO_USAGE, addUsage, HAIKU_MODEL } from '../../lib/ai.js';
-import type { AttendancePhase, DecisionConventions } from '../../types.js';
+import type { AttendancePhase, DecisionConventions, StatedName, StatedPresence, StatedPresentList } from '../../types.js';
 import { PDFDocument } from 'pdf-lib';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -133,7 +133,7 @@ interface RawLlmExtraction {
     presentMembers: string[] | null;
     /** Members from ΑΠΟΝΤΕΣ / "απουσίαζαν" list — always present */
     absentMembers: string[];
-    mayorPresent: { present: boolean; rawText: string } | null;
+    mayorPresent: StatedPresence | null;
     decisionExcerpt: string;
     decisionNumber: string | null;
     references: string;
@@ -144,13 +144,13 @@ interface RawLlmExtraction {
     subjectInfo: AgendaItemRef | null;
     incomplete: boolean;
     /** Who presided in the mayor's or president's place; name "" when the page says nothing. */
-    presidedBy: { name: string; rawText: string };
+    presidedBy: StatedName;
     /** Who kept the minutes in the secretary's place («εκτελούσα χρέη Γραμματέα»); name "" when the page says nothing. */
-    actingSecretary: { name: string; rawText: string };
+    actingSecretary: StatedName;
     /** The item heading as printed («ΘΕΜΑ 3ο», «1ο ΕΚΤΑΚΤΟ ΘΕΜΑ»); "" when the page prints no item number for this decision. */
     subjectHeading: string;
     /** The members listed as present for THIS decision after the decision text (ΤΑ ΜΕΛΗ); empty when the page prints no such list. */
-    decisionAttendance: { present: string[]; rawText: string };
+    decisionAttendance: StatedPresentList;
     /** Counts printed in the vote phrase; -1 for a value the page does not count. */
     voteTally: Record<VoteValue, number>;
 }
@@ -256,7 +256,7 @@ export interface RawExtractedDecision {
     compositionMembers: string[] | null;
     presentMembers: string[];
     absentMembers: string[];
-    mayorPresent: { present: boolean; rawText: string } | null;
+    mayorPresent: StatedPresence | null;
     decisionExcerpt: string;
     decisionNumber: string | null;
     references: string;
@@ -267,13 +267,13 @@ export interface RawExtractedDecision {
     discussionOrder: AgendaItemRef[] | null;
     subjectInfo: AgendaItemRef | null;
     incomplete: boolean;
-    presidedBy: { name: string; rawText: string } | null;
-    actingSecretary: { name: string; rawText: string } | null;
+    presidedBy: StatedName | null;
+    actingSecretary: StatedName | null;
     /** The item heading as printed; "" when the page prints none, in which case subjectInfo is null. */
     subjectHeading: string;
     voteTally: Record<VoteValue, number | null>;
     /** The page's own list of who was present for this decision (ΤΑ ΜΕΛΗ after the decision), never the opening roll call. */
-    decisionAttendance: { present: string[]; rawText: string } | null;
+    decisionAttendance: StatedPresentList | null;
 }
 
 // --- PDF parsing with Claude ---
@@ -664,6 +664,32 @@ const AGENDA_ITEM_REF_SCHEMA = {
     additionalProperties: false,
 };
 
+/*
+ * One schema fragment per stated-fact shape, mirroring StatedName,
+ * StatedPresence and StatedPresentList. A field's schema and its TypeScript
+ * type have to agree, and there is no fragment left to change on its own.
+ */
+const STATED_NAME_SCHEMA = {
+    type: 'object' as const,
+    properties: { name: { type: 'string' }, rawText: { type: 'string' } },
+    required: ['name', 'rawText'],
+    additionalProperties: false,
+};
+
+const STATED_PRESENCE_SCHEMA = {
+    type: 'object' as const,
+    properties: { present: { type: 'boolean' }, rawText: { type: 'string' } },
+    required: ['present', 'rawText'],
+    additionalProperties: false,
+};
+
+const STATED_PRESENT_LIST_SCHEMA = {
+    type: 'object' as const,
+    properties: { present: { type: 'array', items: { type: 'string' } }, rawText: { type: 'string' } },
+    required: ['present', 'rawText'],
+    additionalProperties: false,
+};
+
 const EXTRACTION_OUTPUT_SCHEMA = {
     type: 'object' as const,
     properties: {
@@ -671,20 +697,7 @@ const EXTRACTION_OUTPUT_SCHEMA = {
         compositionMembers: { anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }] },
         presentMembers: { anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }] },
         absentMembers: { type: 'array', items: { type: 'string' } },
-        mayorPresent: {
-            anyOf: [
-                {
-                    type: 'object',
-                    properties: {
-                        present: { type: 'boolean' },
-                        rawText: { type: 'string' },
-                    },
-                    required: ['present', 'rawText'],
-                    additionalProperties: false,
-                },
-                { type: 'null' },
-            ],
-        },
+        mayorPresent: { anyOf: [STATED_PRESENCE_SCHEMA, { type: 'null' }] },
         decisionExcerpt: { type: 'string' },
         decisionNumber: { anyOf: [{ type: 'string' }, { type: 'null' }] },
         references: { type: 'string' },
@@ -730,25 +743,10 @@ const EXTRACTION_OUTPUT_SCHEMA = {
         discussionOrder: { anyOf: [{ type: 'array', items: AGENDA_ITEM_REF_SCHEMA }, { type: 'null' }] },
         subjectInfo: { anyOf: [AGENDA_ITEM_REF_SCHEMA, { type: 'null' }] },
         incomplete: { type: 'boolean' },
-        presidedBy: {
-            type: 'object',
-            properties: { name: { type: 'string' }, rawText: { type: 'string' } },
-            required: ['name', 'rawText'],
-            additionalProperties: false,
-        },
-        actingSecretary: {
-            type: 'object',
-            properties: { name: { type: 'string' }, rawText: { type: 'string' } },
-            required: ['name', 'rawText'],
-            additionalProperties: false,
-        },
+        presidedBy: STATED_NAME_SCHEMA,
+        actingSecretary: STATED_NAME_SCHEMA,
         subjectHeading: { type: 'string' },
-        decisionAttendance: {
-            type: 'object',
-            properties: { present: { type: 'array', items: { type: 'string' } }, rawText: { type: 'string' } },
-            required: ['present', 'rawText'],
-            additionalProperties: false,
-        },
+        decisionAttendance: STATED_PRESENT_LIST_SCHEMA,
         voteTally: {
             type: 'object',
             properties: { FOR: { type: 'integer' }, AGAINST: { type: 'integer' }, ABSTAIN: { type: 'integer' }, PRESENT: { type: 'integer' }, DID_NOT_VOTE: { type: 'integer' } },

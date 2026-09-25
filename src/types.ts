@@ -503,15 +503,15 @@ export interface ExtractedDecisionResult {
     incomplete: boolean;
     /** Always present: every page states some form of roll call, and an empty one is reported as NO_ATTENDANCE rather than as a missing record. */
     rollCall: DocumentRollCall;
-    mayorPresent: { present: boolean; rawText: string } | null;
+    mayorPresent: StatedPresence | null;
     /** Who presided when the page says someone did in the mayor's or president's place. */
-    presidedBy: { name: string; personId: string | null; rawText: string } | null;
+    presidedBy: ResolvedStatedName | null;
     /** Who kept the minutes in the secretary's place, when the page says so; bodies whose ΤΑ ΜΕΛΗ leaves the secretary out leave the acting one out too. */
-    actingSecretary: { name: string; personId: string | null; rawText: string } | null;
+    actingSecretary: ResolvedStatedName | null;
     /** The item heading as printed; "" when the page prints none, and then subjectInfo is null. */
     subjectHeading: string;
     /** The page's own list of who was present for THIS decision (ΤΑ ΜΕΛΗ after the decision text; an ΑΠΟΧΩΡΗΣΑΝΤΕΣ column is departures, never this), with ids; null when the page prints none. Never the opening roll call. */
-    decisionAttendance: { present: string[]; presentIds: string[]; rawText: string } | null;
+    decisionAttendance: ResolvedStatedPresentList | null;
     voteResult: string | null;
     /** Counts printed in the phrase, per vote value; null when not printed. */
     voteTally: Record<VoteValue, number | null>;
@@ -527,6 +527,43 @@ export interface ExtractedDecisionResult {
     diavgeiaPublishDate?: string; // ISO date
     /** Diavgeia's own protocolNumber field, mirrored verbatim. Municipality-defined semantics. */
     diavgeiaProtocolNumber?: string;
+}
+
+/*
+ * What a document states, with the sentence it states it in
+ *
+ * A reading is only auditable beside the words it was read from, so every fact
+ * the reader takes from a sentence carries that sentence. These three shapes
+ * were repeated inline at thirteen sites, and two of them differed only in
+ * whether the value was a name or a flag.
+ */
+
+/** A name the page prints, with the sentence it prints it in. `name` is "" when the page says nobody. */
+export interface StatedName {
+    name: string;
+    rawText: string;
+}
+
+/** A name the page prints, resolved to a person; `personId` is null when the name matched nobody. */
+export interface ResolvedStatedName extends StatedName {
+    personId: string | null;
+}
+
+/** Something the page states as present or not, with the sentence it states it in. */
+export interface StatedPresence {
+    present: boolean;
+    rawText: string;
+}
+
+/** A list of names the page prints as present, with the line that heads them. */
+export interface StatedPresentList {
+    present: string[];
+    rawText: string;
+}
+
+/** A stated present list resolved to people; ids the roster did not match are left out. */
+export interface ResolvedStatedPresentList extends StatedPresentList {
+    presentIds: string[];
 }
 
 /*

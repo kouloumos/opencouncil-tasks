@@ -5,11 +5,12 @@
  * preamble, but extraction errors or PDFs from a different session can
  * produce outliers. This selects the roll call reported by the majority.
  */
+import type { StatedPresence } from '../../types.js';
 
 interface RollCallEntry {
     presentMembers: string[];
     absentMembers: string[];
-    mayorPresent: { present: boolean; rawText: string } | null;
+    mayorPresent: StatedPresence | null;
 }
 
 interface RollCallGroup {
@@ -57,7 +58,7 @@ export function selectRollCall(
     extractions: Array<{
         presentMembers: string[] | null;
         absentMembers: string[] | null;
-        mayorPresent: { present: boolean; rawText: string } | null;
+        mayorPresent: StatedPresence | null;
     }>,
     /**
      * Two documents of one session spell a member differently («Παπαγεωργίου
