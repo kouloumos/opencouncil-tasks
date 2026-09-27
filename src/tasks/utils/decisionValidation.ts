@@ -12,6 +12,7 @@ import { RawExtractedDecision, VoteValue } from './decisionPdfExtraction.js';
  * - MISSING_DECISION_NUMBER (info)  — Decision number (Αριθμός Απόφασης) not found in document
  * - NO_ATTENDANCE         (warning) — Both present and absent member lists are empty
  * - MISSING_VOTE_RESULT   (warning) — Excerpt contains "ΑΠΟΦΑΣΙΖΕΙ" but no vote phrase was extracted
+ * - CLOSING_READ_FAILED   (warning) — The last pages of a long document could not be read; the front read is kept
  *
  * Post-matching (after name matching and vote inference):
  * - NO_VOTE_DETAILS       (warning) — Vote result says majority but no AGAINST/ABSTAIN voters found
@@ -22,7 +23,8 @@ export type DecisionWarningCode =
     | 'MISSING_DECISION_NUMBER'
     | 'NO_ATTENDANCE'
     | 'EXTRACTION_INCOMPLETE'
-    | 'NO_VOTE_DETAILS';
+    | 'NO_VOTE_DETAILS'
+    | 'CLOSING_READ_FAILED';
 
 export type DecisionWarning = TaskWarning<DecisionWarningCode>;
 
@@ -95,7 +97,7 @@ export interface ProcessedDecisionContext {
 }
 
 /**
- * Validate a decision after name matching and vote inference.
+ * Validate a decision after name matching.
  * Catches data quality issues that emerge during processing.
  */
 export function validateProcessedDecision(ctx: ProcessedDecisionContext): DecisionWarning[] {
